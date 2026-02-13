@@ -1,0 +1,14 @@
+{
+  "name": "TrainMate Pro",
+  "short_name": "TrainMate",
+  "description": "سیستم مدیریت تمرین مربی و شاگرد",
+  "theme_color": "#667eea",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "lang": "fa-IR",
+  "dir": "rtl",
+  "icons": [...]
+}

@@ -1,208 +1,295 @@
-
 <template>
   <div class="workout-programs-page">
+    <!-- Page Header - Responsive -->
     <div class="page-header">
-      <h1>📅 برنامه‌های تمرینی</h1>
-      <p>مدیریت برنامه‌های تمرینی شاگردان</p>
-    </div>
-
-    <div class="programs-container">
-      <div class="programs-header">
-        <div class="filters">
-          <div class="filter-group">
-            <label>فیلتر بر اساس شاگرد:</label>
-            <select v-model="selectedStudentId" @change="fetchPrograms" class="form-input">
-              <option value="">همه شاگردان</option>
-              <option v-for="student in students" :key="student.id" :value="student.id">
-                {{ student.fullName }}
-              </option>
-            </select>
-          </div>
+      <div class="header-top">
+        <div class="header-title">
+          <h1>📅 برنامه‌های تمرینی</h1>
+          <p>مدیریت برنامه‌های تمرینی شاگردان</p>
         </div>
         
-        <button @click="goToCreateWorkout" class="btn-primary">
+        <!-- Mobile FAB Button -->
+        <button v-if="isMobile" @click="goToCreateWorkout" class="fab-button">
+          <span class="fab-icon">➕</span>
+        </button>
+        
+        <!-- Desktop Create Button -->
+        <button v-else @click="goToCreateWorkout" class="btn-primary">
           🏋️‍♂️ ایجاد برنامه جدید
         </button>
       </div>
 
+      <!-- Stats Summary Cards -->
+      <div class="stats-summary">
+        <div class="stat-item">
+          <span class="stat-value">{{ programs.length }}</span>
+          <span class="stat-label">کل برنامه‌ها</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ activeProgramsCount }}</span>
+          <span class="stat-label">برنامه‌های فعال</span>
+        </div>
+        <div class="stat-item" v-if="!isMobile">
+          <span class="stat-value">{{ totalStudentsCount }}</span>
+          <span class="stat-label">شاگردان</span>
+        </div>
+        <div class="stat-item" v-if="!isMobile">
+          <span class="stat-value">{{ totalWeeksCount }}</span>
+          <span class="stat-label">هفته‌ها</span>
+        </div>
+      </div>
+
+      <!-- Search and Filters - Mobile Optimized -->
+      <div class="filters-section">
+        <div class="search-box" v-if="programs.length > 0">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            v-model="searchQuery"
+            placeholder="جستجوی برنامه..."
+            class="search-input"
+            @input="filterPrograms"
+          />
+          <button v-if="searchQuery" @click="clearSearch" class="clear-search">
+            ✕
+          </button>
+        </div>
+
+        <div class="filter-group">
+          <div class="filter-label">
+            <span class="filter-icon">👥</span>
+            <span>فیلتر شاگرد:</span>
+          </div>
+          <select v-model="selectedStudentId" @change="fetchPrograms" class="filter-select">
+            <option value="">همه شاگردان</option>
+            <option v-for="student in students" :key="student.id" :value="student.id">
+              {{ student.fullName }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Status Filter Tabs - Mobile -->
+        <div v-if="isMobile" class="status-tabs">
+          <button 
+            v-for="tab in statusTabs" 
+            :key="tab.value"
+            :class="{ active: selectedStatus === tab.value }"
+            @click="setStatusFilter(tab.value)"
+            class="status-tab"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Programs Container -->
+    <div class="programs-container">
+      <!-- Loading State -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
         <p>در حال بارگذاری برنامه‌ها...</p>
       </div>
 
-      <div v-else-if="programs.length === 0" class="empty-state">
-        <div class="empty-icon">📅</div>
-        <h3>هنوز برنامه تمرینی وجود ندارد</h3>
-        <p>برای شاگردان خود برنامه تمرینی ایجاد کنید.</p>
-        <button @click="goToCreateWorkout" class="btn-primary">
-          ایجاد اولین برنامه
+      <!-- Error State -->
+      <div v-else-if="error" class="error-state">
+        <div class="error-icon">⚠️</div>
+        <h3>خطا در بارگذاری</h3>
+        <p>{{ error }}</p>
+        <button @click="fetchPrograms" class="btn-retry">
+          🔄 تلاش مجدد
         </button>
       </div>
 
+      <!-- Empty State -->
+      <div v-else-if="filteredPrograms.length === 0" class="empty-state">
+        <div class="empty-icon">
+          {{ searchQuery ? '🔍' : '📅' }}
+        </div>
+        <h3>
+          {{ searchQuery ? 'نتیجه‌ای یافت نشد' : 'هنوز برنامه تمرینی وجود ندارد' }}
+        </h3>
+        <p>
+          {{ searchQuery 
+            ? 'برنامه‌ای با این مشخصات پیدا نشد.' 
+            : 'برای شاگردان خود برنامه تمرینی ایجاد کنید.' 
+          }}
+        </p>
+        <button v-if="!searchQuery" @click="goToCreateWorkout" class="btn-primary">
+          ➕ ایجاد اولین برنامه
+        </button>
+        <button v-else @click="clearSearch" class="btn-secondary">
+          🗑️ پاک کردن جستجو
+        </button>
+      </div>
+
+      <!-- Programs Grid/List -->
       <div v-else class="programs-list">
-        <div class="program-card" v-for="program in programs" :key="program.id">
-          <div class="program-header">
-            <div class="program-title">
-              <h3>{{ program.title }}</h3>
-              <span class="program-status" :class="program.status">
-                {{ getStatusText(program.status) }}
-              </span>
-            </div>
-            <div class="program-meta">
-              <span class="meta-item">
-                <span class="meta-icon">👤</span>
-                {{ program.student.fullName }}
-              </span>
-              <span class="meta-item">
-                <span class="meta-icon">📅</span>
-                {{ formatDate(program.startDate) }} تا {{ formatDate(program.endDate) }}
-              </span>
-              <span class="meta-item">
-                <span class="meta-icon">⏱️</span>
-                {{ program.durationWeeks }} هفته
-              </span>
-            </div>
+        <!-- Desktop Grid -->
+        <div v-if="!isMobile" class="programs-grid">
+          <div v-for="program in paginatedPrograms" :key="program.id" class="program-card">
+            <ProgramCard 
+              :program="program"
+              @view="viewProgram"
+              @edit="editProgram"
+              @delete="deleteProgram"
+              @duplicate="duplicateProgram"
+            />
+          </div>
+        </div>
+
+        <!-- Mobile List -->
+        <div v-else class="programs-mobile-list">
+          <div v-for="program in paginatedPrograms" :key="program.id" class="program-mobile-card">
+            <ProgramMobileCard 
+              :program="program"
+              @view="viewProgram"
+              @edit="editProgram"
+              @delete="deleteProgram"
+            />
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" v-if="totalPages > 1">
+          <button 
+            @click="prevPage" 
+            :disabled="currentPage === 1"
+            class="pagination-btn"
+          >
+            ←
+          </button>
+          
+          <div class="page-info">
+            <span class="current-page">{{ currentPage }}</span>
+            <span class="total-pages">از {{ totalPages }}</span>
           </div>
           
-          <div class="program-content">
-            <p class="program-description">{{ program.description || 'بدون توضیح' }}</p>
-            
-            <div class="program-weeks">
-              <div class="weeks-summary">
-                <h4>هفته‌های برنامه:</h4>
-                <div class="weeks-grid">
-                  <div class="week-preview" v-for="week in program.weeks.slice(0, 4)" :key="week.id">
-                    <div class="week-preview-header">
-                      <span class="week-number">هفته {{ week.weekNumber }}</span>
-                      <span class="week-focus" v-if="week.focus">{{ week.focus }}</span>
-                    </div>
-                    <div class="week-days">
-                      <span class="day-count">{{ week.days.length }} روز</span>
-                      <span class="exercises-count">
-                        {{ countExercises(week) }} حرکت
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div v-if="program.weeks.length > 4" class="more-weeks">
-                    + {{ program.weeks.length - 4 }} هفته دیگر
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="program-actions">
-            <button @click="viewProgram(program)" class="btn-action">
-              👁️ مشاهده جزئیات
-            </button>
-            <button @click="editProgram(program)" class="btn-action">
-              ✏️ ویرایش
-            </button>
-            <button @click="deleteProgram(program)" class="btn-action delete">
-              🗑️ حذف
-            </button>
-          </div>
+          <button 
+            @click="nextPage" 
+            :disabled="currentPage === totalPages"
+            class="pagination-btn"
+          >
+            →
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Program Detail Modal -->
+    <!-- Program Detail Modal - Mobile Optimized -->
     <div v-if="selectedProgram" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h2>{{ selectedProgram.title }}</h2>
+          <div class="modal-header-content">
+            <h2>{{ selectedProgram.title }}</h2>
+            <span class="program-status" :class="selectedProgram.status">
+              {{ getStatusText(selectedProgram.status) }}
+            </span>
+          </div>
           <button @click="closeModal" class="btn-close">✕</button>
         </div>
         
         <div class="modal-body">
-          <div class="program-detail">
-            <div class="detail-section">
-              <h3>📋 اطلاعات کلی</h3>
-              <div class="detail-grid">
-                <div class="detail-item">
-                  <span class="detail-label">شاگرد:</span>
-                  <span class="detail-value">{{ selectedProgram.student.fullName }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">مربی:</span>
-                  <span class="detail-value">{{ selectedProgram.coach.fullName }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">مدت:</span>
-                  <span class="detail-value">{{ selectedProgram.durationWeeks }} هفته</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">وضعیت:</span>
-                  <span class="detail-value" :class="selectedProgram.status">
-                    {{ getStatusText(selectedProgram.status) }}
-                  </span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">تاریخ شروع:</span>
-                  <span class="detail-value">{{ formatDate(selectedProgram.startDate) }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">تاریخ پایان:</span>
-                  <span class="detail-value">{{ formatDate(selectedProgram.endDate) }}</span>
-                </div>
-              </div>
+          <!-- Program Info Card -->
+          <div class="program-info-card">
+            <div class="info-row">
+              <span class="info-label">👤 شاگرد:</span>
+              <span class="info-value">{{ selectedProgram.student.fullName }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">👨‍🏫 مربی:</span>
+              <span class="info-value">{{ selectedProgram.coach.fullName }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">📅 تاریخ:</span>
+              <span class="info-value">
+                {{ formatDate(selectedProgram.startDate) }} تا {{ formatDate(selectedProgram.endDate) }}
+              </span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">⏱️ مدت:</span>
+              <span class="info-value">{{ selectedProgram.durationWeeks }} هفته</span>
+            </div>
+          </div>
+          
+          <!-- Description -->
+          <div class="description-card" v-if="selectedProgram.description">
+            <div class="card-header">
+              <span class="header-icon">📝</span>
+              <h3>توضیحات</h3>
+            </div>
+            <p>{{ selectedProgram.description }}</p>
+          </div>
+          
+          <!-- Weekly Schedule - Accordion for Mobile -->
+          <div class="schedule-card">
+            <div class="card-header">
+              <span class="header-icon">📅</span>
+              <h3>برنامه هفتگی</h3>
             </div>
             
-            <div class="detail-section" v-if="selectedProgram.description">
-              <h3>📝 توضیحات</h3>
-              <p>{{ selectedProgram.description }}</p>
-            </div>
-            
-            <div class="detail-section">
-              <h3>📅 برنامه هفتگی</h3>
-              <div class="weeks-detail">
-                <div class="week-detail" v-for="week in selectedProgram.weeks" :key="week.id">
-                  <div class="week-detail-header">
-                    <h4>{{ week.title }} (هفته {{ week.weekNumber }})</h4>
-                    <span class="week-focus" v-if="week.focus">{{ week.focus }}</span>
+            <div class="weeks-accordion">
+              <div 
+                v-for="week in selectedProgram.weeks" 
+                :key="week.id"
+                class="week-accordion-item"
+                :class="{ expanded: expandedWeek === week.id }"
+              >
+                <div class="week-accordion-header" @click="toggleWeek(week.id)">
+                  <div class="week-info">
+                    <span class="week-title">هفته {{ week.weekNumber }}</span>
+                    <span v-if="week.focus" class="week-focus-badge">
+                      {{ week.focus }}
+                    </span>
                   </div>
-                  
-                  <div class="days-detail">
-                    <div class="day-detail" v-for="day in week.days" :key="day.id">
-                      <div class="day-detail-header">
-                        <h5>{{ getDayName(day.dayName) }} - {{ day.title }}</h5>
-                        <span v-if="day.duration" class="day-duration">
-                          ⏱️ {{ day.duration }} دقیقه
-                        </span>
-                      </div>
-                      
-                      <div v-if="day.focus" class="day-focus">
-                        <strong>تمرکز:</strong> {{ day.focus }}
-                      </div>
-                      
-                      <div class="exercises-detail" v-if="day.exercises.length > 0">
-                        <h6>حرکات:</h6>
-                        <div class="exercises-table">
-                          <div class="exercise-row header">
-                            <div class="ex-col-name">حرکت</div>
-                            <div class="ex-col-sets">ست</div>
-                            <div class="ex-col-reps">تکرار</div>
-                            <div class="ex-col-rest">استراحت</div>
-                          </div>
-                          
-                          <div class="exercise-row" v-for="exercise in day.exercises" :key="exercise.id">
-                            <div class="ex-col-name">
-                              <strong>{{ exercise.name }}</strong>
-                              <div v-if="exercise.description" class="ex-description">
-                                {{ exercise.description }}
-                              </div>
-                            </div>
-                            <div class="ex-col-sets">{{ exercise.sets }}</div>
-                            <div class="ex-col-reps">{{ exercise.reps }}</div>
-                            <div class="ex-col-rest">{{ exercise.restTime }}</div>
-                          </div>
+                  <div class="week-meta">
+                    <span class="week-days-count">{{ week.days.length }} روز</span>
+                    <span class="accordion-icon">
+                      {{ expandedWeek === week.id ? '▼' : '◀' }}
+                    </span>
+                  </div>
+                </div>
+                
+                <div class="week-accordion-content" v-show="expandedWeek === week.id">
+                  <div 
+                    v-for="day in week.days" 
+                    :key="day.id"
+                    class="day-item"
+                  >
+                    <div class="day-header">
+                      <span class="day-name">{{ getDayName(day.dayName) }}</span>
+                      <span v-if="day.duration" class="day-duration">
+                        ⏱️ {{ day.duration }} دقیقه
+                      </span>
+                    </div>
+                    
+                    <div class="day-focus" v-if="day.focus">
+                      🎯 {{ day.focus }}
+                    </div>
+                    
+                    <div class="exercises-list" v-if="day.exercises.length > 0">
+                      <div 
+                        v-for="exercise in day.exercises" 
+                        :key="exercise.id"
+                        class="exercise-item"
+                      >
+                        <div class="exercise-name">
+                          <span class="exercise-dot"></span>
+                          {{ exercise.name }}
+                        </div>
+                        <div class="exercise-details">
+                          <span class="detail-badge">{{ exercise.sets }} ست</span>
+                          <span class="detail-badge">{{ exercise.reps }} تکرار</span>
+                          <span class="detail-badge">{{ exercise.restTime }}</span>
+                        </div>
+                        <div class="exercise-note" v-if="exercise.description">
+                          {{ exercise.description }}
                         </div>
                       </div>
-                      
-                      <div v-else class="no-exercises">
-                        هیچ حرکتی برای این روز تعریف نشده است
-                      </div>
+                    </div>
+                    
+                    <div v-else class="rest-day">
+                      روز استراحت
                     </div>
                   </div>
                 </div>
@@ -212,23 +299,54 @@
         </div>
         
         <div class="modal-footer">
-          <button @click="closeModal" class="btn-secondary">بستن</button>
+          <button @click="closeModal" class="btn-secondary">
+            بستن
+          </button>
+          <button @click="editProgram(selectedProgram)" class="btn-edit">
+            ✏️ ویرایش
+          </button>
           <button @click="printProgram(selectedProgram)" class="btn-primary">
-            🖨️ چاپ برنامه
+            🖨️ چاپ
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- Quick Action FAB for Mobile -->
+    <div v-if="isMobile && programs.length > 0" class="fab-container">
+      <button @click="goToCreateWorkout" class="fab-main-button">
+        <span class="fab-main-icon">➕</span>
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
+// Import child components
+import ProgramCard from './ProgramCard.vue'
+import ProgramMobileCard from './ProgramMobileCard.vue'
+
 // Reactive state
 const programs = ref([])
+const filteredPrograms = ref([])
 const students = ref([])
 const selectedStudentId = ref('')
+const selectedStatus = ref('all')
+const searchQuery = ref('')
 const loading = ref(true)
+const error = ref('')
 const selectedProgram = ref(null)
+const expandedWeek = ref(null)
+const isMobile = ref(false)
+const currentPage = ref(1)
+const itemsPerPage = ref(9)
+
+// Status tabs for mobile
+const statusTabs = [
+  { value: 'all', label: 'همه' },
+  { value: 'active', label: 'فعال' },
+  { value: 'completed', label: 'تکمیل شده' }
+]
 
 // Days of week in Persian
 const persianDays = {
@@ -241,12 +359,48 @@ const persianDays = {
   friday: 'جمعه'
 }
 
+// Computed
+const activeProgramsCount = computed(() => {
+  return programs.value.filter(p => p.status === 'active').length
+})
+
+const totalStudentsCount = computed(() => {
+  const uniqueStudents = new Set(programs.value.map(p => p.student.id))
+  return uniqueStudents.size
+})
+
+const totalWeeksCount = computed(() => {
+  return programs.value.reduce((total, p) => total + (p.weeks?.length || 0), 0)
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredPrograms.value.length / itemsPerPage.value)
+})
+
+const paginatedPrograms = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return filteredPrograms.value.slice(start, end)
+})
+
 // Emit for parent component
 const emit = defineEmits(['menu-changed'])
 
+// Check if device is mobile
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768
+  itemsPerPage.value = isMobile.value ? 5 : 9
+}
+
 // Fetch data on component mount
 onMounted(async () => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
   await Promise.all([fetchStudents(), fetchPrograms()])
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
 })
 
 // Fetch students
@@ -265,6 +419,8 @@ const fetchStudents = async () => {
 const fetchPrograms = async () => {
   try {
     loading.value = true
+    error.value = ''
+    
     let url = '/api/workouts'
     if (selectedStudentId.value) {
       url += `?studentId=${selectedStudentId.value}`
@@ -274,11 +430,61 @@ const fetchPrograms = async () => {
     
     if (response.success) {
       programs.value = response.programs
+      filterPrograms()
     }
   } catch (err) {
     console.error('Error fetching workout programs:', err)
+    error.value = err.data?.statusMessage || 'خطا در دریافت برنامه‌ها'
   } finally {
     loading.value = false
+  }
+}
+
+// Filter programs
+const filterPrograms = () => {
+  let filtered = [...programs.value]
+  
+  // Filter by status
+  if (selectedStatus.value !== 'all') {
+    filtered = filtered.filter(p => p.status === selectedStatus.value)
+  }
+  
+  // Filter by search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(p => 
+      p.title.toLowerCase().includes(query) ||
+      p.student?.fullName.toLowerCase().includes(query) ||
+      p.description?.toLowerCase().includes(query)
+    )
+  }
+  
+  filteredPrograms.value = filtered
+  currentPage.value = 1
+}
+
+// Set status filter
+const setStatusFilter = (status) => {
+  selectedStatus.value = status
+  filterPrograms()
+}
+
+// Clear search
+const clearSearch = () => {
+  searchQuery.value = ''
+  filterPrograms()
+}
+
+// Pagination functions
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
   }
 }
 
@@ -309,6 +515,11 @@ const countExercises = (week) => {
   return week.days.reduce((total, day) => total + day.exercises.length, 0)
 }
 
+// Toggle week accordion
+const toggleWeek = (weekId) => {
+  expandedWeek.value = expandedWeek.value === weekId ? null : weekId
+}
+
 // Navigation functions
 const goToCreateWorkout = () => {
   emit('menu-changed', 'create-workout')
@@ -316,21 +527,27 @@ const goToCreateWorkout = () => {
 
 const viewProgram = (program) => {
   selectedProgram.value = program
+  expandedWeek.value = program.weeks[0]?.id || null
 }
 
 const editProgram = (program) => {
   alert(`ویرایش برنامه: ${program.title}\nاین بخش به زودی فعال می‌شود.`)
+  closeModal()
+}
+
+const duplicateProgram = (program) => {
+  alert(`تکثیر برنامه: ${program.title}\nاین بخش به زودی فعال می‌شود.`)
 }
 
 const deleteProgram = async (program) => {
   if (confirm(`آیا مطمئنید که می‌خواهید برنامه "${program.title}" را حذف کنید؟`)) {
-    // Here you would call delete API
     alert('حذف برنامه (در نسخه بعدی پیاده‌سازی می‌شود)')
   }
 }
 
 const closeModal = () => {
   selectedProgram.value = null
+  expandedWeek.value = null
 }
 
 const printProgram = (program) => {
@@ -341,82 +558,221 @@ const printProgram = (program) => {
 <style scoped>
 .workout-programs-page {
   direction: rtl;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1rem;
 }
 
+/* Page Header */
 .page-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
-.page-header h1 {
-  color: #333;
-  margin-bottom: 0.5rem;
-  font-size: 1.8rem;
-}
-
-.page-header p {
-  color: #666;
-  font-size: 1rem;
-}
-
-.programs-container {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
-}
-
-.programs-header {
+.header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 1.5rem;
 }
 
-.filters {
+.header-title h1 {
+  color: #333;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.header-title p {
+  color: #666;
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* FAB Button */
+.fab-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  cursor: pointer;
   display: flex;
-  gap: 1.5rem;
   align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.fab-button:active {
+  transform: scale(0.95);
+}
+
+.fab-icon {
+  font-size: 1.5rem;
+}
+
+/* Stats Summary */
+.stats-summary {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 100px;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #667eea;
+  line-height: 1;
+}
+
+.stat-label {
+  color: #666;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+/* Filters Section */
+.filters-section {
+  background: white;
+  padding: 1.25rem;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 1.5rem;
+}
+
+.search-box {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.search-icon {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  font-size: 1rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.875rem 3rem 0.875rem 1rem;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.clear-search {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+}
+
+.clear-search:hover {
+  background: #f0f0f0;
 }
 
 .filter-group {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
-}
-
-.filter-group label {
-  font-size: 0.9rem;
   color: #666;
-  font-weight: 500;
+  font-size: 0.95rem;
 }
 
-.form-input {
-  padding: 0.5rem 0.75rem;
+.filter-icon {
+  font-size: 1.1rem;
+}
+
+.filter-select {
+  padding: 0.75rem 1rem;
   border: 2px solid #e1e5e9;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 0.95rem;
   min-width: 200px;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: left 1rem center;
+  background-size: 1em;
+  padding-left: 2.5rem;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  padding: 0.75rem 2rem;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+/* Status Tabs */
+.status-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.status-tab {
+  padding: 0.5rem 1.25rem;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  background: white;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-2px);
+.status-tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
 }
 
+/* Programs Container */
+.programs-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+  min-height: 500px;
+}
+
+/* Loading State */
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -440,6 +796,43 @@ const printProgram = (program) => {
   100% { transform: rotate(360deg); }
 }
 
+/* Error State */
+.error-state {
+  text-align: center;
+  padding: 4rem 0;
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.error-state h3 {
+  color: #c62828;
+  margin-bottom: 0.5rem;
+}
+
+.error-state p {
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.btn-retry {
+  background: #f5f5f5;
+  border: 2px solid #e0e0e0;
+  padding: 0.75rem 2rem;
+  border-radius: 12px;
+  color: #666;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-retry:hover {
+  background: #e0e0e0;
+}
+
+/* Empty State */
 .empty-state {
   text-align: center;
   padding: 4rem 0;
@@ -459,188 +852,132 @@ const printProgram = (program) => {
 .empty-state p {
   color: #888;
   margin-bottom: 2rem;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.programs-list {
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 44px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+  background: white;
+  border: 2px solid #e0e0e0;
+  padding: 0.75rem 2rem;
+  border-radius: 12px;
+  color: #666;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 44px;
+}
+
+.btn-secondary:hover {
+  background: #f5f5f5;
+}
+
+.btn-edit {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 44px;
+}
+
+.btn-edit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 152, 0, 0.3);
+}
+
+/* Programs Grid - Desktop */
+.programs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Programs List - Mobile */
+.programs-mobile-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-}
-
-.program-card {
-  background: #f8f9fa;
-  border: 2px solid #e9ecef;
-  border-radius: 12px;
-  padding: 1.5rem;
-  transition: all 0.3s ease;
-}
-
-.program-card:hover {
-  border-color: #667eea;
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
-}
-
-.program-header {
-  margin-bottom: 1.5rem;
-}
-
-.program-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.program-title h3 {
-  margin: 0;
-  color: #333;
-  font-size: 1.3rem;
-}
-
-.program-status {
-  padding: 0.25rem 1rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.program-status.active {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.program-status.completed {
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.program-status.cancelled {
-  background: #ffebee;
-  color: #c62828;
-}
-
-.program-meta {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.meta-icon {
-  font-size: 1rem;
-}
-
-.program-content {
-  margin-bottom: 1.5rem;
-}
-
-.program-description {
-  color: #666;
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background: white;
-  border-radius: 8px;
-  border-left: 3px solid #667eea;
-}
-
-.program-weeks {
-  background: white;
-  padding: 1rem;
-  border-radius: 8px;
-}
-
-.weeks-summary h4 {
-  margin: 0 0 1rem 0;
-  color: #444;
-  font-size: 1.1rem;
-}
-
-.weeks-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
+  margin-bottom: 2rem;
 }
 
-.week-preview {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 0.75rem;
-}
-
-.week-preview-header {
+/* Pagination */
+.pagination {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  margin-bottom: 0.5rem;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 2px solid #f0f0f0;
 }
 
-.week-number {
-  font-weight: 600;
-  color: #444;
-  font-size: 0.9rem;
-}
-
-.week-focus {
+.pagination-btn {
+  width: 44px;
+  height: 44px;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px;
+  background: white;
   color: #666;
-  font-size: 0.8rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100px;
-}
-
-.week-days {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.8rem;
-  color: #888;
-}
-
-.more-weeks {
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #667eea;
-  font-weight: 600;
-  font-size: 0.9rem;
 }
 
-.program-actions {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: flex-end;
-}
-
-.btn-action {
-  padding: 0.5rem 1rem;
-  background: white;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 0.9rem;
-}
-
-.btn-action:hover {
+.pagination-btn:hover:not(:disabled) {
   background: #f5f5f5;
   border-color: #667eea;
   color: #667eea;
 }
 
-.btn-action.delete:hover {
-  border-color: #f44336;
-  color: #f44336;
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.current-page {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.total-pages {
+  color: #666;
+  font-size: 0.9rem;
 }
 
 /* Modal Styles */
@@ -660,9 +997,9 @@ const printProgram = (program) => {
 
 .modal-content {
   background: white;
-  border-radius: 12px;
+  border-radius: 20px;
   width: 100%;
-  max-width: 1000px;
+  max-width: 800px;
   max-height: 90vh;
   overflow-y: auto;
   animation: slideIn 0.3s ease;
@@ -671,7 +1008,7 @@ const printProgram = (program) => {
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateY(-50px);
+    transform: translateY(-30px);
   }
   to {
     opacity: 1;
@@ -682,14 +1019,49 @@ const printProgram = (program) => {
 .modal-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   padding: 1.5rem;
   border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
 }
 
-.modal-header h2 {
+.modal-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modal-header-content h2 {
   margin: 0;
   color: #333;
+  font-size: 1.3rem;
+}
+
+.program-status {
+  display: inline-block;
+  padding: 0.25rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.program-status.active {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.program-status.completed {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.program-status.cancelled {
+  background: #ffebee;
+  color: #c62828;
 }
 
 .btn-close {
@@ -698,10 +1070,13 @@ const printProgram = (program) => {
   font-size: 1.5rem;
   cursor: pointer;
   color: #666;
-  transition: color 0.3s ease;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.3s ease;
 }
 
 .btn-close:hover {
+  background: #f5f5f5;
   color: #f44336;
 }
 
@@ -709,237 +1084,539 @@ const printProgram = (program) => {
   padding: 1.5rem;
 }
 
-.program-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.detail-section {
-  margin-bottom: 1.5rem;
-}
-
-.detail-section h3 {
-  color: #444;
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #667eea;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1rem;
+/* Modal Cards */
+.program-info-card,
+.description-card,
+.schedule-card {
   background: #f8f9fa;
-  padding: 1rem;
-  border-radius: 8px;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-}
-
-.detail-label {
-  color: #666;
-  font-size: 0.9rem;
-  margin-bottom: 0.25rem;
-}
-
-.detail-value {
-  color: #333;
-  font-weight: 500;
-}
-
-.detail-section p {
-  color: #666;
-  line-height: 1.6;
-  background: #f8f9fa;
-  padding: 1rem;
-  border-radius: 8px;
-}
-
-.weeks-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.week-detail {
-  background: #f8f9fa;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
+  border-radius: 16px;
   padding: 1.25rem;
+  margin-bottom: 1.25rem;
 }
 
-.week-detail-header {
+.card-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 2px solid #e9ecef;
 }
 
-.week-detail-header h4 {
+.header-icon {
+  font-size: 1.2rem;
+}
+
+.card-header h3 {
   margin: 0;
   color: #444;
   font-size: 1.1rem;
 }
 
-.week-detail-header .week-focus {
-  color: #667eea;
-  font-weight: 500;
+.info-row {
+  display: flex;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  width: 100px;
+  color: #666;
   font-size: 0.9rem;
 }
 
-.days-detail {
+.info-value {
+  flex: 1;
+  color: #333;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.description-card p {
+  margin: 0;
+  color: #666;
+  line-height: 1.7;
+}
+
+/* Weeks Accordion */
+.weeks-accordion {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
-.day-detail {
+.week-accordion-item {
   background: white;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  padding: 1rem;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-.day-detail-header {
+.week-accordion-item.expanded {
+  border-color: #667eea;
+}
+
+.week-accordion-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 1rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.week-accordion-header:active {
+  background: #f8f9fa;
+}
+
+.week-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.week-title {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+}
+
+.week-focus-badge {
+  color: #667eea;
+  font-size: 0.8rem;
+  background: #eef2ff;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.week-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.week-days-count {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.accordion-icon {
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.week-accordion-content {
+  padding: 1rem;
+  border-top: 1px solid #f0f0f0;
+  background: #f8f9fa;
+}
+
+/* Day Items */
+.day-item {
+  background: white;
+  border-radius: 10px;
+  padding: 1rem;
   margin-bottom: 0.75rem;
+  border: 1px solid #e9ecef;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px dashed #dee2e6;
 }
 
-.day-detail-header h5 {
-  margin: 0;
-  color: #444;
-  font-size: 1rem;
+.day-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
 }
 
 .day-duration {
-  color: #666;
-  font-size: 0.9rem;
+  color: #667eea;
+  font-size: 0.85rem;
 }
 
 .day-focus {
   color: #666;
-  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-right: 3px solid #ff9800;
+}
+
+/* Exercise Items */
+.exercise-item {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.exercise-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
   font-size: 0.9rem;
 }
 
-.exercises-detail h6 {
-  margin: 0 0 0.75rem 0;
-  color: #555;
-  font-size: 0.95rem;
+.exercise-dot {
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
 }
 
-.exercises-table {
-  display: table;
-  width: 100%;
-  border-collapse: collapse;
+.exercise-details {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
 }
 
-.exercise-row {
-  display: table-row;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.exercise-row.header {
-  font-weight: 600;
-  background: #f8f9fa;
-}
-
-.exercise-row.header .ex-col-name {
-  border-right: none;
-}
-
-.ex-col-name,
-.ex-col-sets,
-.ex-col-reps,
-.ex-col-rest {
-  display: table-cell;
-  padding: 0.75rem;
-  vertical-align: top;
-}
-
-.ex-col-name {
-  width: 50%;
-  text-align: right;
-}
-
-.ex-col-sets,
-.ex-col-reps,
-.ex-col-rest {
-  width: 16.66%;
-  text-align: center;
-}
-
-.ex-description {
+.detail-badge {
+  background: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
   color: #666;
-  font-size: 0.85rem;
-  margin-top: 0.25rem;
+  border: 1px solid #e0e0e0;
+}
+
+.exercise-note {
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #fff3e0;
+  border-radius: 6px;
   font-style: italic;
 }
 
-.no-exercises {
-  color: #999;
+.rest-day {
   text-align: center;
+  color: #999;
   padding: 1rem;
   font-style: italic;
   background: #f8f9fa;
-  border-radius: 6px;
+  border-radius: 8px;
+  border: 2px dashed #dee2e6;
 }
 
+/* Modal Footer */
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
+  gap: 0.75rem;
   padding: 1.5rem;
   border-top: 1px solid #f0f0f0;
+  position: sticky;
+  bottom: 0;
+  background: white;
 }
 
-.btn-secondary {
-  background: #f5f5f5;
-  color: #666;
-  border: 2px solid #e0e0e0;
-  padding: 0.75rem 2rem;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+/* FAB Container */
+.fab-container {
+  position: fixed;
+  bottom: 2rem;
+  left: 1rem;
+  z-index: 100;
+}
+
+.fab-main-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.3s ease;
 }
 
-.btn-secondary:hover {
-  background: #e0e0e0;
+.fab-main-button:active {
+  transform: scale(0.95);
+}
+
+.fab-main-icon {
+  font-size: 1.5rem;
+}
+
+/* Responsive Styles */
+@media (max-width: 1024px) {
+  .programs-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .workout-programs-page {
+    padding: 0.75rem;
+  }
+
+  .header-title h1 {
+    font-size: 1.5rem;
+  }
+
+  .header-title p {
+    font-size: 0.9rem;
+  }
+
+  .stats-summary {
+    padding: 1rem;
+    justify-content: space-around;
+    gap: 1rem;
+  }
+
+  .stat-item {
+    min-width: auto;
+  }
+
+  .stat-value {
+    font-size: 1.6rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  .filters-section {
+    padding: 1rem;
+  }
+
+  .filter-select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .programs-container {
+    padding: 1rem;
+  }
+
+  .modal-content {
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .modal-header {
+    padding: 1rem;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .modal-footer {
+    padding: 1rem;
+    flex-direction: column;
+  }
+
+  .modal-footer button {
+    width: 100%;
+  }
+
+  .info-row {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .info-label {
+    width: auto;
+  }
+
+  .fab-container {
+    bottom: 1.5rem;
+    left: 1rem;
+  }
+
+  .fab-main-button {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-summary {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .stat-item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .stat-value {
+    font-size: 1.4rem;
+  }
+
+  .stat-label {
+    margin-top: 0;
+  }
+
+  .programs-container {
+    padding: 0.75rem;
+  }
+
+  .week-meta {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.25rem;
+  }
+
+  .fab-container {
+    bottom: 1rem;
+    left: 0.75rem;
+  }
+
+  .fab-main-button {
+    width: 48px;
+    height: 48px;
+  }
+
+  .fab-main-icon {
+    font-size: 1.3rem;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .btn-primary,
+  .btn-secondary,
+  .btn-edit,
+  .filter-select,
+  .status-tab,
+  .week-accordion-header,
+  .fab-main-button {
+    min-height: 48px;
+  }
+
+  .week-accordion-header:active {
+    background: #f0f0f0;
+  }
+
+  .btn-primary:active,
+  .btn-edit:active,
+  .fab-main-button:active {
+    transform: scale(0.96);
+  }
+}
+
+/* RTL Support */
+[dir="rtl"] .search-icon {
+  right: 1rem;
+  left: auto;
+}
+
+[dir="rtl"] .search-input {
+  padding: 0.875rem 3rem 0.875rem 1rem;
+}
+
+[dir="rtl"] .clear-search {
+  left: 1rem;
+  right: auto;
+}
+
+[dir="rtl"] .filter-select {
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+  padding-left: 1rem;
+}
+
+[dir="rtl"] .fab-container {
+  left: auto;
+  right: 1rem;
+}
+
+[dir="rtl"] .pagination-btn:first-child {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] .pagination-btn:last-child {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] .accordion-icon {
+  transform: scaleX(-1);
+}
+
+/* Safe Area Support */
+@supports (padding: max(0px)) {
+  .workout-programs-page {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .fab-container {
+    bottom: max(2rem, env(safe-area-inset-bottom));
+    left: max(1rem, env(safe-area-inset-left));
+  }
+
+  [dir="rtl"] .fab-container {
+    right: max(1rem, env(safe-area-inset-right));
+    left: auto;
+  }
+
+  .modal-content {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .btn-primary,
+  .fab-button,
+  .fab-main-button,
+  .modal-content {
+    animation: none;
+    transition: none;
+  }
 }
 
 /* Print Styles */
 @media print {
-  .modal-overlay {
-    position: static;
-    background: none;
-  }
-  
-  .modal-content {
-    max-width: none;
-    max-height: none;
-    box-shadow: none;
-    border: 1px solid #000;
-  }
-  
-  .modal-header,
-  .modal-footer,
+  .filters-section,
+  .programs-header button,
   .program-actions,
-  .filters,
-  .programs-header button {
+  .btn-action,
+  .fab-container,
+  .pagination,
+  .modal-footer,
+  .btn-close {
     display: none !important;
+  }
+
+  .programs-container {
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .program-card,
+  .program-mobile-card {
+    break-inside: avoid;
+    border: 1px solid #000;
   }
 }
 </style>
