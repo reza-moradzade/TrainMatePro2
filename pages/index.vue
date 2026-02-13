@@ -11,7 +11,7 @@
     <div class="mobile-brand" v-if="isMobile">
       <div class="brand-icon">💪</div>
       <h1 class="brand-title">TrainMate Pro</h1>
-      <p class="brand-subtitle">سیستم مدیریت تمرین</p>
+      <p class="brand-subtitle">سیستم مدیریت برنامه تمرینی</p>
     </div>
 
     <!-- کانتینر فرم لاگین -->
@@ -22,7 +22,7 @@
           <span class="logo-icon">💪</span>
         </div>
         <h2 class="logo-title">TrainMate Pro</h2>
-        <p class="logo-subtitle">سیستم مدیریت تمرین مربی و شاگرد</p>
+        <p class="logo-subtitle">سیستم مدیریت برنامه تمرینی</p>
       </div>
 
       <!-- کامپوننت فرم لاگین -->

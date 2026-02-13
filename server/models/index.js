@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs'
 // Connect to SQLite database
 const sequelize = new Sequelize({
   dialect: 'sqlite',
-  storage: process.env.DATABASE_PATH || '/app/.data/db.sqlite',
+  storage: process.env.DATABASE_PATH || './database.sqlite',
   logging: false
 })
 
@@ -349,19 +349,19 @@ const createDefaultUsers = async () => {
     if (userCount === 0) {
       // Create coach user
       const coach = await User.create({
-        email: 'coach@trainmate.com',
-        password: 'coach123',
-        fullName: 'آرمان محمودی',
+        email: 'qc.reza@gmail.com',
+        password: 'reza123456',
+        fullName: 'رضا مرادزاده',
         role: 'coach',
-        department: 'فیتنس'
+        department: 'بدنسازی'
       })
       console.log('Coach user created:', coach.email)
       
       // Create student user with coach relation
       const student = await User.create({
-        email: 'student@trainmate.com',
+        email: 'ali@gmail.com',
         password: 'student123',
-        fullName: 'رضا کریمی',
+        fullName: 'علی مرادزاده',
         role: 'student',
         department: 'ورزشکار',
         coachId: coach.id
@@ -370,33 +370,33 @@ const createDefaultUsers = async () => {
       // Create student profile
       const studentProfile = await Student.create({
         userId: student.id,
-        age: 25,
+        age: 20,
         gender: 'male',
-        height: 180,
-        weight: 75,
+        height: 178,
+        weight: 62,
         fitnessLevel: 'intermediate',
-        goals: 'افزایش قدرت و استقامت',
-        notes: 'شاگرد نمونه'
+        goals: 'افزایش حجم عضله',
+        notes: 'شاگرد'
       })
       
       console.log('Student user created:', student.email)
       
       // Create a sample workout program
-      const program = await WorkoutProgram.create({
-        studentId: studentProfile.id,
-        coachId: coach.id,
-        title: 'برنامه فیتنس اولیه',
-        description: 'برنامه ۴ هفته‌ای برای افزایش قدرت پایه',
-        startDate: '2024-01-01',
-        endDate: '2024-01-28',
-        durationWeeks: 4,
-        status: 'active',
-        notes: 'برنامه نمونه برای نمایش'
-      })
+      // const program = await WorkoutProgram.create({
+      //   studentId: studentProfile.id,
+      //   coachId: coach.id,
+      //   title: 'برنامه فیتنس اولیه',
+      //   description: 'برنامه ۴ هفته‌ای برای افزایش قدرت پایه',
+      //   startDate: '2024-01-01',
+      //   endDate: '2024-01-28',
+      //   durationWeeks: 4,
+      //   status: 'active',
+      //   notes: 'برنامه نمونه برای نمایش'
+      // })
       
-      console.log('Sample workout program created')
+     //console.log('Sample workout program created')
       
-      console.log('Default users created successfully.')
+     // console.log('Default users created successfully.')
     }
   } catch (error) {
     console.error('Error creating default users:', error)

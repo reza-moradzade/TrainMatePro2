@@ -6,7 +6,7 @@
         <div class="logo-icon">💪</div>
       </div>
 
-      <h2>سیستم مدیریت تمرین</h2>
+      <h2>سیستم مدیریت برنامه تمرینی</h2>
       
       <!-- فیلد ایمیل با آیکون -->
       <div class="form-group">
@@ -40,8 +40,18 @@
           <span class="label-icon">🔒</span>
           رمز عبور
         </label>
+                  <button 
+            type="button" 
+            @click="togglePassword" 
+            class="toggle-password"
+            :aria-label="showPassword ? 'مخفی کردن رمز' : 'نمایش رمز'"
+          >
+            {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+          </button>
         <div class="input-wrapper">
+          
           <span class="input-icon">🔒</span>
+          
           <input
             :id="passwordFieldId"
             v-model="form.password"
@@ -54,15 +64,9 @@
             @blur="validatePassword"
             @input="clearError"
           />
-          <button 
-            type="button" 
-            @click="togglePassword" 
-            class="toggle-password"
-            :aria-label="showPassword ? 'مخفی کردن رمز' : 'نمایش رمز'"
-          >
-            {{ showPassword ? '👁️' : '👁️‍🗨️' }}
-          </button>
+
         </div>
+        
         <span v-if="validationErrors.password" class="error-text">
           {{ validationErrors.password }}
         </span>
@@ -98,42 +102,6 @@
         </div>
       </transition>
 
-      <!-- اطلاعات آزمایشی - جمع‌شونده در موبایل -->
-      <div class="demo-info" :class="{ 'collapsed': isMobile && !showDemo }">
-        <div class="demo-header" @click="isMobile && (showDemo = !showDemo)" v-if="isMobile">
-          <span class="demo-icon">🔧</span>
-          <span class="demo-title">اطلاعات آزمایشی</span>
-          <span class="expand-icon">{{ showDemo ? '▼' : '◀' }}</span>
-        </div>
-        
-        <div class="demo-content" v-show="!isMobile || showDemo">
-          <p><strong>اطلاعات آزمایشی:</strong></p>
-          <div class="demo-item">
-            <span class="role-badge coach">مربی</span>
-            <span class="demo-credential">coach@trainmate.com / coach123</span>
-          </div>
-          <div class="demo-item">
-            <span class="role-badge student">شاگرد</span>
-            <span class="demo-credential">student@trainmate.com / student123</span>
-          </div>
-          <p class="note">✅ هم مربی و هم شاگرد می‌توانند وارد شوند</p>
-        </div>
-      </div>
-
-      <!-- دکمه‌های سریع برای موبایل -->
-      <div class="quick-login" v-if="isMobile">
-        <p>ورود سریع:</p>
-        <div class="quick-buttons">
-          <button type="button" class="quick-btn coach" @click="quickLogin('coach')">
-            <span>👨‍🏫</span>
-            مربی
-          </button>
-          <button type="button" class="quick-btn student" @click="quickLogin('student')">
-            <span>🧑‍🎓</span>
-            شاگرد
-          </button>
-        </div>
-      </div>
     </form>
   </div>
 </template>
