@@ -30,11 +30,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Local data
-database.sqlite
-*.sqlite
-*.db
-
 # OS generated files
 Thumbs.db
 ehthumbs.db
