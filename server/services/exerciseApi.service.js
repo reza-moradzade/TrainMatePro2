@@ -1,5 +1,5 @@
 // سرویس برای ارتباط با ExerciseDB API
-const EXERCISE_API_URL = process.env.EXERCISE_API_URL || 'http://localhost:3001/api/v1'
+const EXERCISE_API_URL = process.env.EXERCISE_API_URL || 'https://exercise-api-production-1e19.up.railway.app/api/v1'
 
 export class ExerciseApiService {
   
