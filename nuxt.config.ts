@@ -132,7 +132,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // سمت سرور
     sessionSecret: process.env.SESSION_SECRET || 'dev-secret',
-    databasePath: process.env.DATABASE_PATH || '/tmp/database.sqlite', // Railway path
+    databasePath: process.env.DATABASE_PATH || '/app/data/database.sqlite', // Railway path
     exerciseApiUrl: process.env.EXERCISE_API_URL || 'https://exercise-api-production-1e19.up.railway.app/api/v1',
     
     // سمت کلاینت
