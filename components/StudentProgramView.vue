@@ -156,6 +156,15 @@
                       <div class="exercise-header">
                         <span class="exercise-number">{{ exercise.order }}</span>
                         <span class="exercise-name">{{ exercise.name }}</span>
+                        <!-- NEW: Exercise GIF Button -->
+                        <button 
+                          v-if="exercise.gifUrl" 
+                          @click.stop="showExerciseGif(exercise)"
+                          class="exercise-gif-button"
+                          title="نمایش انیمیشن حرکت"
+                        >
+                          🎬
+                        </button>
                       </div>
                       
                       <div class="exercise-specs">
@@ -220,9 +229,13 @@
                   v-for="exercise in day.exercises.slice(0, 2)" 
                   :key="exercise.id"
                   class="exercise-preview"
+                  @click="showExerciseGif(exercise)"
                 >
-                  <span class="preview-name">{{ exercise.name }}</span>
-                  <span class="preview-sets">{{ exercise.sets }}×{{ exercise.reps }}</span>
+                  <div class="preview-info">
+                    <span class="preview-name">{{ exercise.name }}</span>
+                    <span class="preview-sets">{{ exercise.sets }}×{{ exercise.reps }}</span>
+                  </div>
+                  <span v-if="exercise.gifUrl" class="preview-gif-icon" title="نمایش انیمیشن">🎬</span>
                 </div>
                 <div v-if="day.exercises.length > 2" class="more-exercises">
                   + {{ day.exercises.length - 2 }} حرکت دیگر
@@ -242,10 +255,48 @@
       </div>
       <p>{{ program.notes }}</p>
     </div>
+
+    <!-- NEW: Exercise GIF Modal -->
+    <div v-if="showGifModal" class="modal-overlay" @click="closeGifModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>{{ selectedExercise.name }}</h3>
+          <button @click="closeGifModal" class="close-button">✕</button>
+        </div>
+        <div class="modal-body">
+          <img 
+            :src="selectedExercise.gifUrl" 
+            :alt="selectedExercise.name"
+            class="exercise-gif"
+            loading="lazy"
+          />
+          <div class="exercise-details">
+            <div class="detail-item">
+              <span class="detail-label">ست‌ها:</span>
+              <span class="detail-value">{{ selectedExercise.sets }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">تکرار:</span>
+              <span class="detail-value">{{ selectedExercise.reps }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">استراحت:</span>
+              <span class="detail-value">{{ selectedExercise.restTime }}</span>
+            </div>
+          </div>
+          <div v-if="selectedExercise.description" class="exercise-description">
+            <strong>نکات:</strong>
+            <p>{{ selectedExercise.description }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+
 // Props
 const props = defineProps({
   program: {
@@ -258,6 +309,8 @@ const props = defineProps({
 const activeWeek = ref(1)
 const expandedDay = ref(null)
 const isMobile = ref(false)
+const showGifModal = ref(false)
+const selectedExercise = ref(null)
 
 // Computed
 const activeWeekData = computed(() => {
@@ -309,6 +362,18 @@ const setActiveWeek = (weekNumber) => {
 // Toggle day accordion
 const toggleDay = (index) => {
   expandedDay.value = expandedDay.value === index ? null : index
+}
+
+// Show exercise GIF modal
+const showExerciseGif = (exercise) => {
+  selectedExercise.value = exercise
+  showGifModal.value = true
+}
+
+// Close GIF modal
+const closeGifModal = () => {
+  showGifModal.value = false
+  selectedExercise.value = null
 }
 
 // Get status text
@@ -758,6 +823,25 @@ const getTotalDuration = (week) => {
   border-radius: 6px;
 }
 
+/* NEW: Exercise GIF Button */
+.exercise-gif-button {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  margin-right: auto;
+  transition: transform 0.2s ease;
+}
+
+.exercise-gif-button:hover {
+  transform: scale(1.2);
+}
+
+.exercise-gif-button:active {
+  transform: scale(0.95);
+}
+
 /* Exercise Cards */
 .exercises-section h6 {
   margin: 0 0 1rem 0;
@@ -796,12 +880,14 @@ const getTotalDuration = (week) => {
   justify-content: center;
   font-weight: 600;
   font-size: 0.8rem;
+  flex-shrink: 0;
 }
 
 .exercise-name {
   font-weight: 600;
   color: #333;
   font-size: 0.95rem;
+  flex: 1;
 }
 
 .exercise-specs {
@@ -859,18 +945,39 @@ const getTotalDuration = (week) => {
   justify-content: space-between;
   align-items: center;
   font-size: 0.85rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.exercise-preview:hover {
+  background: #e9ecef;
+}
+
+.preview-info {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex: 1;
 }
 
 .preview-name {
-  color: #666;
+  color: #333;
 }
 
 .preview-sets {
-  color: #333;
+  color: #667eea;
   font-weight: 500;
-  background: #f5f5f5;
+  background: white;
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
+}
+
+.preview-gif-icon {
+  font-size: 1rem;
+  opacity: 0.7;
 }
 
 .more-exercises {
@@ -878,6 +985,7 @@ const getTotalDuration = (week) => {
   font-size: 0.8rem;
   font-weight: 500;
   margin-top: 0.25rem;
+  text-align: center;
 }
 
 /* Rest Day */
@@ -945,6 +1053,129 @@ const getTotalDuration = (week) => {
   line-height: 1.7;
 }
 
+/* NEW: Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0.5rem;
+  border-radius: 50%;
+}
+
+.close-button:hover {
+  background: #f5f5f5;
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+.exercise-gif {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  background: #f8f9fa;
+}
+
+.exercise-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.detail-label {
+  color: #666;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.detail-value {
+  color: #333;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.exercise-description {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.exercise-description strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #444;
+}
+
+.exercise-description p {
+  margin: 0;
+}
+
 /* Responsive Styles */
 @media (max-width: 1024px) {
   .program-meta-grid {
@@ -1007,6 +1238,10 @@ const getTotalDuration = (week) => {
   .spec-item {
     min-width: calc(50% - 0.5rem);
   }
+
+  .exercise-details {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1048,13 +1283,19 @@ const getTotalDuration = (week) => {
     width: 100%;
     justify-content: space-between;
   }
+
+  .modal-content {
+    margin: 1rem;
+  }
 }
 
 /* Touch Device Optimizations */
 @media (hover: none) and (pointer: coarse) {
   .week-tab,
   .day-accordion-header,
-  .day-card {
+  .day-card,
+  .exercise-preview,
+  .exercise-gif-button {
     cursor: default;
   }
 
@@ -1083,14 +1324,21 @@ const getTotalDuration = (week) => {
   .program-header.mobile {
     padding-top: max(1.5rem, env(safe-area-inset-top));
   }
+
+  .modal-content {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   .week-tab,
   .day-card,
-  .day-accordion-header {
+  .day-accordion-header,
+  .exercise-preview,
+  .modal-content {
     transition: none;
+    animation: none;
   }
 }
 </style>

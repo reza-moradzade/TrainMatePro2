@@ -273,17 +273,40 @@
                         :key="exercise.id"
                         class="exercise-item"
                       >
-                        <div class="exercise-name">
-                          <span class="exercise-dot"></span>
-                          {{ exercise.name }}
+                        <div class="exercise-header">
+                          <div class="exercise-name">
+                            <span class="exercise-dot"></span>
+                            {{ exercise.name }}
+                          </div>
+                          <!-- دکمه نمایش انیمیشن برای مربی -->
+                          <button 
+                            v-if="exercise.gifUrl" 
+                            @click.stop="showExerciseGif(exercise)"
+                            class="exercise-gif-button"
+                            title="نمایش انیمیشن حرکت"
+                          >
+                            🎬
+                          </button>
                         </div>
+                        
                         <div class="exercise-details">
                           <span class="detail-badge">{{ exercise.sets }} ست</span>
                           <span class="detail-badge">{{ exercise.reps }} تکرار</span>
                           <span class="detail-badge">{{ exercise.restTime }}</span>
                         </div>
+                        
                         <div class="exercise-note" v-if="exercise.description">
                           {{ exercise.description }}
+                        </div>
+
+                        <!-- دکمه مشاهده انیمیشن در بخش پایین -->
+                        <div v-if="exercise.gifUrl" class="exercise-gif-action">
+                          <button 
+                            @click.stop="showExerciseGif(exercise)"
+                            class="view-gif-button"
+                          >
+                            🎬 مشاهده انیمیشن حرکت
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -308,6 +331,44 @@
           <button @click="printProgram(selectedProgram)" class="btn-primary">
             🖨️ چاپ
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- مودال نمایش GIF -->
+    <div v-if="showGifModal" class="modal-overlay" @click="closeGifModal">
+      <div class="modal-content gif-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ selectedExercise?.name }}</h3>
+          <button @click="closeGifModal" class="btn-close">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <img 
+            v-if="selectedExercise?.gifUrl"
+            :src="selectedExercise.gifUrl" 
+            :alt="selectedExercise.name"
+            class="exercise-gif"
+            loading="lazy"
+          />
+          <div class="exercise-details-modal">
+            <div class="detail-item">
+              <span class="detail-label">ست‌ها:</span>
+              <span class="detail-value">{{ selectedExercise?.sets }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">تکرار:</span>
+              <span class="detail-value">{{ selectedExercise?.reps }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">استراحت:</span>
+              <span class="detail-value">{{ selectedExercise?.restTime }}</span>
+            </div>
+          </div>
+          <div v-if="selectedExercise?.description" class="exercise-description">
+            <strong>نکات:</strong>
+            <p>{{ selectedExercise.description }}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -341,6 +402,10 @@ const isMobile = ref(false)
 const currentPage = ref(1)
 const itemsPerPage = ref(9)
 
+// Modal states for GIF
+const showGifModal = ref(false)
+const selectedExercise = ref(null)
+
 // Status tabs for mobile
 const statusTabs = [
   { value: 'all', label: 'همه' },
@@ -365,7 +430,7 @@ const activeProgramsCount = computed(() => {
 })
 
 const totalStudentsCount = computed(() => {
-  const uniqueStudents = new Set(programs.value.map(p => p.student.id))
+  const uniqueStudents = new Set(programs.value.map(p => p.student?.id))
   return uniqueStudents.size
 })
 
@@ -431,6 +496,7 @@ const fetchPrograms = async () => {
     if (response.success) {
       programs.value = response.programs
       filterPrograms()
+      console.log('Programs loaded with exercises:', programs.value[0]?.weeks[0]?.days[0]?.exercises)
     }
   } catch (err) {
     console.error('Error fetching workout programs:', err)
@@ -453,8 +519,8 @@ const filterPrograms = () => {
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(p => 
-      p.title.toLowerCase().includes(query) ||
-      p.student?.fullName.toLowerCase().includes(query) ||
+      p.title?.toLowerCase().includes(query) ||
+      p.student?.fullName?.toLowerCase().includes(query) ||
       p.description?.toLowerCase().includes(query)
     )
   }
@@ -488,6 +554,19 @@ const prevPage = () => {
   }
 }
 
+// Show exercise GIF
+const showExerciseGif = (exercise) => {
+  console.log('Showing GIF for:', exercise.name, exercise.gifUrl)
+  selectedExercise.value = exercise
+  showGifModal.value = true
+}
+
+// Close GIF modal
+const closeGifModal = () => {
+  showGifModal.value = false
+  selectedExercise.value = null
+}
+
 // Get status text
 const getStatusText = (status) => {
   const statusMap = {
@@ -508,11 +587,6 @@ const formatDate = (dateString) => {
   if (!dateString) return 'ثبت نشده'
   const date = new Date(dateString)
   return date.toLocaleDateString('fa-IR')
-}
-
-// Count total exercises in a week
-const countExercises = (week) => {
-  return week.days.reduce((total, day) => total + day.exercises.length, 0)
 }
 
 // Toggle week accordion
@@ -1264,13 +1338,19 @@ const printProgram = (program) => {
   margin-bottom: 0.5rem;
 }
 
+.exercise-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
 .exercise-name {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
   color: #333;
-  margin-bottom: 0.5rem;
   font-size: 0.9rem;
 }
 
@@ -1279,6 +1359,26 @@ const printProgram = (program) => {
   height: 8px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 50%;
+}
+
+/* Exercise GIF Button */
+.exercise-gif-button {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  transition: transform 0.2s ease;
+  border-radius: 4px;
+}
+
+.exercise-gif-button:hover {
+  transform: scale(1.2);
+  background: #f0f0f0;
+}
+
+.exercise-gif-button:active {
+  transform: scale(1.1);
 }
 
 .exercise-details {
@@ -1305,6 +1405,33 @@ const printProgram = (program) => {
   background: #fff3e0;
   border-radius: 6px;
   font-style: italic;
+}
+
+/* Exercise GIF Action */
+.exercise-gif-action {
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.view-gif-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.view-gif-button:hover {
+  background: #5a6fd8;
+  transform: translateY(-2px);
+}
+
+.view-gif-button:active {
+  transform: scale(0.97);
 }
 
 .rest-day {
@@ -1358,6 +1485,62 @@ const printProgram = (program) => {
 
 .fab-main-icon {
   font-size: 1.5rem;
+}
+
+/* GIF Modal */
+.gif-modal {
+  max-width: 500px;
+}
+
+.exercise-gif {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  background: #f8f9fa;
+}
+
+.exercise-details-modal {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.detail-label {
+  color: #666;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.detail-value {
+  color: #333;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.exercise-description {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.exercise-description strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #444;
 }
 
 /* Responsive Styles */
@@ -1444,6 +1627,10 @@ const printProgram = (program) => {
     width: auto;
   }
 
+  .exercise-details-modal {
+    grid-template-columns: 1fr;
+  }
+
   .fab-container {
     bottom: 1.5rem;
     left: 1rem;
@@ -1509,7 +1696,9 @@ const printProgram = (program) => {
   .filter-select,
   .status-tab,
   .week-accordion-header,
-  .fab-main-button {
+  .fab-main-button,
+  .exercise-gif-button,
+  .view-gif-button {
     min-height: 48px;
   }
 
@@ -1519,7 +1708,9 @@ const printProgram = (program) => {
 
   .btn-primary:active,
   .btn-edit:active,
-  .fab-main-button:active {
+  .fab-main-button:active,
+  .exercise-gif-button:active,
+  .view-gif-button:active {
     transform: scale(0.96);
   }
 }
@@ -1589,7 +1780,9 @@ const printProgram = (program) => {
   .btn-primary,
   .fab-button,
   .fab-main-button,
-  .modal-content {
+  .modal-content,
+  .exercise-gif-button,
+  .view-gif-button {
     animation: none;
     transition: none;
   }
@@ -1604,7 +1797,10 @@ const printProgram = (program) => {
   .fab-container,
   .pagination,
   .modal-footer,
-  .btn-close {
+  .btn-close,
+  .exercise-gif-button,
+  .view-gif-button,
+  .gif-modal {
     display: none !important;
   }
 

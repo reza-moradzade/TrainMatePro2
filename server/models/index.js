@@ -1,4 +1,3 @@
-
 import { Sequelize, DataTypes } from 'sequelize'
 import bcrypt from 'bcryptjs'
 
@@ -9,6 +8,7 @@ const sequelize = new Sequelize({
   logging: false
 })
 
+// ==================== USER MODELS ====================
 // User model definition (for authentication)
 const User = sequelize.define('User', {
   id: {
@@ -97,6 +97,7 @@ const Student = sequelize.define('Student', {
   }
 })
 
+// ==================== WORKOUT MODELS ====================
 // Workout Program model
 const WorkoutProgram = sequelize.define('WorkoutProgram', {
   id: {
@@ -236,7 +237,60 @@ const WorkoutDay = sequelize.define('WorkoutDay', {
   }
 })
 
-// Exercise model (هر حرکت ورزشی)
+// ==================== EXERCISE MODELS ====================
+// Exercise Reference model (برای ذخیره اطلاعات حرکات از API خارجی)
+const ExerciseRef = sequelize.define('ExerciseRef', {
+  id: {
+    type: DataTypes.INTEGER,
+    primaryKey: true,
+    autoIncrement: true
+  },
+  exerciseId: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+    comment: 'ID from ExerciseDB API'
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  gifUrl: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  targetMuscles: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: []
+  },
+  bodyParts: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: []
+  },
+  equipments: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: []
+  },
+  secondaryMuscles: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: []
+  },
+  instructions: {
+    type: DataTypes.JSON,
+    allowNull: false,
+    defaultValue: []
+  },
+  lastSynced: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
+  }
+})
+
+// Exercise model (هر حرکت ورزشی در برنامه تمرینی)
 const Exercise = sequelize.define('Exercise', {
   id: {
     type: DataTypes.INTEGER,
@@ -250,6 +304,20 @@ const Exercise = sequelize.define('Exercise', {
       model: 'WorkoutDays',
       key: 'id'
     }
+  },
+  exerciseRefId: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'ExerciseRefs',
+      key: 'id'
+    },
+    comment: 'Reference to cached exercise in ExerciseRef table'
+  },
+  exerciseApiId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Direct reference to exercise ID from external API (for quick lookup)'
   },
   order: {
     type: DataTypes.INTEGER,
@@ -275,38 +343,55 @@ const Exercise = sequelize.define('Exercise', {
     defaultValue: '10-12'
   },
   restTime: {
-    type: DataTypes.STRING, // زمان استراحت بین ست‌ها
+    type: DataTypes.STRING,
     allowNull: true,
     defaultValue: '60-90 ثانیه'
   },
   notes: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  gifUrl: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: 'Cached GIF URL from external API'
   }
 })
 
-// Define relationships
+// ==================== RELATIONSHIPS ====================
+// User - Student relationships
 User.hasOne(Student, { foreignKey: 'userId' })
 Student.belongsTo(User, { foreignKey: 'userId' })
 
+// Coach - Student relationships (self-reference)
 User.hasMany(User, { as: 'Students', foreignKey: 'coachId' })
 User.belongsTo(User, { as: 'Coach', foreignKey: 'coachId' })
 
+// Student - WorkoutProgram relationships
 Student.hasMany(WorkoutProgram, { foreignKey: 'studentId' })
 WorkoutProgram.belongsTo(Student, { foreignKey: 'studentId' })
 
+// Coach - WorkoutProgram relationships
 User.hasMany(WorkoutProgram, { as: 'CoachPrograms', foreignKey: 'coachId' })
 WorkoutProgram.belongsTo(User, { as: 'Coach', foreignKey: 'coachId' })
 
+// WorkoutProgram - WorkoutWeek relationships
 WorkoutProgram.hasMany(WorkoutWeek, { foreignKey: 'programId' })
 WorkoutWeek.belongsTo(WorkoutProgram, { foreignKey: 'programId' })
 
+// WorkoutWeek - WorkoutDay relationships
 WorkoutWeek.hasMany(WorkoutDay, { foreignKey: 'weekId' })
 WorkoutDay.belongsTo(WorkoutWeek, { foreignKey: 'weekId' })
 
+// WorkoutDay - Exercise relationships
 WorkoutDay.hasMany(Exercise, { foreignKey: 'dayId' })
 Exercise.belongsTo(WorkoutDay, { foreignKey: 'dayId' })
 
+// ExerciseRef - Exercise relationships
+ExerciseRef.hasMany(Exercise, { foreignKey: 'exerciseRefId' })
+Exercise.belongsTo(ExerciseRef, { foreignKey: 'exerciseRefId' })
+
+// ==================== HOOKS & METHODS ====================
 // Hash password before saving
 User.beforeCreate(async (user) => {
   if (user.password) {
@@ -327,18 +412,20 @@ User.prototype.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password)
 }
 
+// ==================== DATABASE INITIALIZATION ====================
 // Initialize and sync database
 const initializeDatabase = async () => {
   try {
     await sequelize.authenticate()
-    console.log('Database connection established successfully.')
+    console.log('✅ Database connection established successfully.')
     
+    // Sync all models (create tables if they don't exist)
     await sequelize.sync({ force: false })
-    console.log('Database synchronized.')
+    console.log('✅ Database synchronized.')
     
     await createDefaultUsers()
   } catch (error) {
-    console.error('Unable to connect to the database:', error)
+    console.error('❌ Unable to connect to the database:', error)
   }
 }
 
@@ -355,55 +442,38 @@ const createDefaultUsers = async () => {
         role: 'coach',
         department: 'بدنسازی'
       })
-      console.log('Coach user created:', coach.email)
+      console.log('✅ Coach user created:', coach.email)
       
-      // Create student user with coach relation
-      const student = await User.create({
-        email: 'ali@gmail.com',
-        password: 'student123',
-        fullName: 'علی مرادزاده',
-        role: 'student',
-        department: 'ورزشکار',
-        coachId: coach.id
-      })
-      
-      // Create student profile
-      const studentProfile = await Student.create({
-        userId: student.id,
-        age: 20,
-        gender: 'male',
-        height: 178,
-        weight: 62,
-        fitnessLevel: 'intermediate',
-        goals: 'افزایش حجم عضله',
-        notes: 'شاگرد'
-      })
-      
-      console.log('Student user created:', student.email)
-      
-      // Create a sample workout program
-      // const program = await WorkoutProgram.create({
-      //   studentId: studentProfile.id,
-      //   coachId: coach.id,
-      //   title: 'برنامه فیتنس اولیه',
-      //   description: 'برنامه ۴ هفته‌ای برای افزایش قدرت پایه',
-      //   startDate: '2024-01-01',
-      //   endDate: '2024-01-28',
-      //   durationWeeks: 4,
-      //   status: 'active',
-      //   notes: 'برنامه نمونه برای نمایش'
+      // // Optionally create a sample student for testing
+      // const student = await User.create({
+      //   email: 'student@example.com',
+      //   password: 'student123',
+      //   fullName: 'شاگرد نمونه',
+      //   role: 'student',
+      //   department: 'عمومی',
+      //   coachId: coach.id
       // })
+      // console.log('✅ Sample student created:', student.email)
       
-     //console.log('Sample workout program created')
-      
-     // console.log('Default users created successfully.')
+      // // Create student profile
+      // await Student.create({
+      //   userId: student.id,
+      //   age: 25,
+      //   gender: 'male',
+      //   height: 175,
+      //   weight: 70,
+      //   fitnessLevel: 'intermediate',
+      //   goals: 'افزایش قدرت و تناسب اندام',
+      //   notes: 'شاگرد نمونه برای تست'
+      // })
+      // console.log('✅ Sample student profile created')
     }
   } catch (error) {
-    console.error('Error creating default users:', error)
+    console.error('❌ Error creating default users:', error)
   }
 }
 
-// Export all modules
+// ==================== EXPORTS ====================
 export {
   User,
   Student,
@@ -411,6 +481,7 @@ export {
   WorkoutWeek,
   WorkoutDay,
   Exercise,
+  ExerciseRef,  // <-- مدل جدید اضافه شد
   sequelize,
   initializeDatabase
 }

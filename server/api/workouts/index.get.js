@@ -1,135 +1,91 @@
-
-import { WorkoutProgram, WorkoutWeek, WorkoutDay, Exercise, Student, User } from '../../models/index.js'
+import { WorkoutProgram, WorkoutWeek, WorkoutDay, Exercise, ExerciseRef, Student, User } from '../../models/index.js'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Check if user is authenticated
     const authToken = getCookie(event, 'trainmate-auth')
     if (!authToken) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'لطفاً ابتدا وارد شوید'
-      })
+      throw createError({ statusCode: 401, statusMessage: 'لطفاً ابتدا وارد شوید' })
     }
     
     const session = JSON.parse(authToken)
-    const { studentId } = getQuery(event)
+    const { studentId } = getQuery(event)  // <-- این خط رو برگردوندیم
     
     let programs
     
     if (session.role === 'coach') {
-      // Coach can see all programs for a specific student or all students
-      const whereCondition = {}
+      // ===== بخش مربی =====
+      // اول همه شاگردهای این مربی رو پیدا می‌کنیم
+      const students = await Student.findAll({
+        include: [{
+          model: User,
+          where: { coachId: session.userId }
+        }]
+      })
       
+      const allStudentIds = students.map(s => s.id)
+      
+      // اگر studentId مشخص شده، فقط اون شاگرد رو فیلتر کن
+      let whereCondition = {}
       if (studentId) {
-        // Check if this student belongs to the coach
-        const student = await Student.findOne({
-          where: { 
-            id: studentId,
-          },
-          include: [{
-            model: User,
-            where: { coachId: session.userId }
-          }]
-        })
-        
-        if (!student) {
-          throw createError({
-            statusCode: 404,
-            statusMessage: 'شاگرد مورد نظر یافت نشد'
-          })
+        // چک کن این شاگرد متعلق به این مربی هست؟
+        const belongsToCoach = allStudentIds.includes(parseInt(studentId))
+        if (!belongsToCoach) {
+          throw createError({ statusCode: 404, statusMessage: 'شاگرد مورد نظر یافت نشد' })
         }
-        
-        whereCondition.studentId = studentId
+        whereCondition.studentId = parseInt(studentId)
       } else {
-        // Get all students of this coach, then get their programs
-        const students = await Student.findAll({
-          include: [{
-            model: User,
-            where: { coachId: session.userId },
-            attributes: ['id']
-          }]
-        })
-        
-        const studentIds = students.map(s => s.id)
-        whereCondition.studentId = studentIds
+        whereCondition.studentId = allStudentIds
       }
       
       programs = await WorkoutProgram.findAll({
         where: whereCondition,
         include: [
-          {
-            model: Student,
-            include: [{
-              model: User,
-              attributes: ['id', 'fullName', 'email']
-            }]
-          },
-          {
-            model: User,
-            as: 'Coach',
-            attributes: ['id', 'fullName']
-          },
-          {
+          { model: Student, include: [{ model: User }] },
+          { model: User, as: 'Coach' },
+          { 
             model: WorkoutWeek,
             include: [{
               model: WorkoutDay,
               include: [{
                 model: Exercise,
-                order: [['order', 'ASC']]
+                include: [{ model: ExerciseRef }]
               }]
             }]
           }
         ],
         order: [['createdAt', 'DESC']]
       })
-    } else if (session.role === 'student') {
-      // Student can only see their own programs
-      const student = await Student.findOne({
-        where: { userId: session.userId }
-      })
       
-      if (!student) {
-        throw createError({
-          statusCode: 404,
-          statusMessage: 'پروفایل دانش آموز یافت نشد'
-        })
-      }
+    } else if (session.role === 'student') {
+      // ===== بخش شاگرد =====
+      const student = await Student.findOne({ where: { userId: session.userId } })
       
       programs = await WorkoutProgram.findAll({
         where: { studentId: student.id },
         include: [
-          {
-            model: Student,
-            include: [{
-              model: User,
-              attributes: ['id', 'fullName', 'email']
-            }]
-          },
-          {
-            model: User,
-            as: 'Coach',
-            attributes: ['id', 'fullName']
-          },
-          {
+          { model: Student, include: [{ model: User }] },
+          { model: User, as: 'Coach' },
+          { 
             model: WorkoutWeek,
             include: [{
               model: WorkoutDay,
               include: [{
                 model: Exercise,
-                order: [['order', 'ASC']]
+                include: [{ model: ExerciseRef }]
               }]
             }]
           }
         ],
         order: [['createdAt', 'DESC']]
       })
+      
     } else {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'دسترسی غیرمجاز'
-      })
+      throw createError({ statusCode: 403, statusMessage: 'دسترسی غیرمجاز' })
     }
+    
+    // لاگ برای دیباگ
+    console.log(`📊 Programs loaded for ${session.role}:`, programs.length)
+    if (studentId) console.log('🔍 Filtered by studentId:', studentId)
     
     return {
       success: true,
@@ -145,8 +101,8 @@ export default defineEventHandler(async (event) => {
         createdAt: program.createdAt,
         student: program.Student ? {
           id: program.Student.id,
-          fullName: program.Student.User.fullName,
-          email: program.Student.User.email
+          fullName: program.Student.User?.fullName,
+          email: program.Student.User?.email
         } : null,
         coach: program.Coach ? {
           id: program.Coach.id,
@@ -166,15 +122,20 @@ export default defineEventHandler(async (event) => {
             focus: day.focus,
             duration: day.duration,
             notes: day.notes,
-            exercises: day.Exercises ? day.Exercises.map(exercise => ({
-              id: exercise.id,
-              order: exercise.order,
-              name: exercise.name,
-              description: exercise.description,
-              sets: exercise.sets,
-              reps: exercise.reps,
-              restTime: exercise.restTime,
-              notes: exercise.notes
+            exercises: day.Exercises ? day.Exercises.map(ex => ({
+              id: ex.id,
+              order: ex.order,
+              name: ex.name,
+              description: ex.description,
+              sets: ex.sets,
+              reps: ex.reps,
+              restTime: ex.restTime,
+              notes: ex.notes,
+              gifUrl: ex.gifUrl || ex.ExerciseRef?.gifUrl || null,
+              exerciseRef: ex.ExerciseRef ? {
+                gifUrl: ex.ExerciseRef.gifUrl,
+                targetMuscles: ex.ExerciseRef.targetMuscles
+              } : null
             })) : []
           })) : []
         })) : []
@@ -182,10 +143,10 @@ export default defineEventHandler(async (event) => {
     }
     
   } catch (error) {
-    console.error('Error fetching workout programs:', error)
-    throw createError({
-      statusCode: error.statusCode || 500,
-      statusMessage: error.statusMessage || 'خطا در دریافت برنامه‌های تمرینی'
+    console.error('❌ Error fetching workout programs:', error)
+    throw createError({ 
+      statusCode: error.statusCode || 500, 
+      statusMessage: error.statusMessage || 'خطا در دریافت برنامه‌های تمرینی' 
     })
   }
 })

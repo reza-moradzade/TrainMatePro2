@@ -1,10 +1,6 @@
 <template>
   <div class="login-container" :class="{ 'mobile': isMobile }">
     <form @submit.prevent="handleLogin" class="login-form">
-      <!-- لوگوی فرم در موبایل -->
-      <div class="form-logo" v-if="isMobile">
-        <div class="logo-icon">💪</div>
-      </div>
 
       <h2>سیستم مدیریت برنامه تمرینی</h2>
       
@@ -15,12 +11,11 @@
           ایمیل
         </label>
         <div class="input-wrapper">
-          <span class="input-icon">📧</span>
           <input
             id="email"
             v-model="form.email"
             type="email"
-            placeholder="coach@trainmate.com"
+            placeholder="ایمیل خود را وارد کنید"
             required
             class="form-input"
             dir="ltr"
@@ -40,31 +35,36 @@
           <span class="label-icon">🔒</span>
           رمز عبور
         </label>
-                  <button 
-            type="button" 
-            @click="togglePassword" 
-            class="toggle-password"
-            :aria-label="showPassword ? 'مخفی کردن رمز' : 'نمایش رمز'"
-          >
-            {{ showPassword ? '👁️' : '👁️‍🗨️' }}
-          </button>
-        <div class="input-wrapper">
-          
-          <span class="input-icon">🔒</span>
-          
+
+        <div class="input-wrapper password-wrapper">
           <input
             :id="passwordFieldId"
             v-model="form.password"
             :type="showPassword ? 'text' : 'password'"
             placeholder="رمز عبور خود را وارد کنید"
             required
-            class="form-input"
+            class="form-input password-input"
             dir="ltr"
             :class="{ 'error': validationErrors.password }"
             @blur="validatePassword"
             @input="clearError"
           />
-
+          
+ <button 
+    type="button" 
+    @click="togglePassword" 
+    class="toggle-password"
+    :aria-label="showPassword ? 'مخفی کردن رمز' : 'نمایش رمز'"
+  >
+    <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+    
+    <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+    </svg>
+  </button>
         </div>
         
         <span v-if="validationErrors.password" class="error-text">
@@ -257,6 +257,11 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
+.toggle-password svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+}
 .login-container {
   display: flex;
   justify-content: center;
@@ -277,26 +282,6 @@ const handleLogin = async () => {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-}
-
-/* Form Logo - Mobile */
-.form-logo {
-  text-align: center;
-  margin-bottom: 1.5rem;
-}
-
-.form-logo .logo-icon {
-  font-size: 3rem;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
 }
 
 h2 {
@@ -333,18 +318,14 @@ label {
   align-items: center;
 }
 
-.input-icon {
-  position: absolute;
-  right: 1rem;
-  color: #999;
-  font-size: 1.1rem;
-  z-index: 1;
-  transition: color 0.3s ease;
+/* مخصوص فیلد رمز عبور */
+.password-wrapper {
+  position: relative;
 }
 
 .form-input {
   width: 100%;
-  padding: 0.875rem 3rem 0.875rem 1rem;
+  padding: 0.875rem 1rem;
   border: 2px solid #e1e5e9;
   border-radius: 12px;
   font-size: 1rem;
@@ -352,6 +333,12 @@ label {
   background: white;
   direction: ltr;
   text-align: left;
+}
+
+/* تنظیمات مخصوص فیلد رمز عبور */
+.password-input {
+  padding-right: 1rem;
+  padding-left: 3rem; /* فضا برای دکمه نمایش رمز */
 }
 
 .form-input:focus {
@@ -371,7 +358,9 @@ label {
 /* Toggle Password */
 .toggle-password {
   position: absolute;
-  left: 1rem;
+  left: 10px; /* فاصله از لبه چپ */
+  top: 50%;
+  transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
@@ -383,6 +372,9 @@ label {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
 }
 
 .toggle-password:hover {
@@ -529,159 +521,6 @@ label {
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* Demo Info */
-.demo-info {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 12px;
-  margin-top: 1.5rem;
-  overflow: hidden;
-}
-
-.demo-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: #e3f2fd;
-  color: #1565c0;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.demo-header:active {
-  background: #bbdefb;
-}
-
-.demo-icon {
-  font-size: 1.1rem;
-}
-
-.demo-title {
-  flex: 1;
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.expand-icon {
-  font-size: 0.9rem;
-  transition: transform 0.3s ease;
-}
-
-.demo-content {
-  padding: 1rem;
-  border-top: 1px solid #e9ecef;
-}
-
-.demo-content p {
-  margin: 0 0 0.75rem 0;
-  color: #1565c0;
-  font-weight: 600;
-}
-
-.demo-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-  padding: 0.5rem;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.role-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 15px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: white;
-  white-space: nowrap;
-}
-
-.role-badge.coach {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.role-badge.student {
-  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
-}
-
-.demo-credential {
-  font-size: 0.85rem;
-  color: #666;
-  direction: ltr;
-  text-align: left;
-  font-family: monospace;
-}
-
-.note {
-  color: #4caf50 !important;
-  font-size: 0.85rem;
-  margin-top: 0.75rem !important;
-  font-weight: 500 !important;
-}
-
-/* Quick Login - Mobile */
-.quick-login {
-  margin-top: 1.5rem;
-  text-align: center;
-}
-
-.quick-login p {
-  color: #666;
-  font-size: 0.85rem;
-  margin-bottom: 0.75rem;
-  font-weight: 500;
-}
-
-.quick-buttons {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: center;
-}
-
-.quick-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  background: white;
-  color: #666;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.quick-btn.coach {
-  border-color: #667eea;
-  color: #667eea;
-}
-
-.quick-btn.coach:active {
-  background: #667eea;
-  color: white;
-}
-
-.quick-btn.student {
-  border-color: #4caf50;
-  color: #4caf50;
-}
-
-.quick-btn.student:active {
-  background: #4caf50;
-  color: white;
-}
-
-.quick-btn span {
-  font-size: 1.1rem;
-}
-
 /* Transitions */
 .fade-enter-active,
 .fade-leave-active {
@@ -716,36 +555,22 @@ label {
   }
 
   .form-input {
-    padding: 1rem 3rem 1rem 1rem;
+    padding: 1rem 1rem;
     font-size: 16px; /* Prevent zoom on mobile */
   }
 
+  .password-input {
+    padding-left: 3rem;
+  }
+
   .toggle-password {
-    padding: 0.75rem;
+    width: 44px;
+    height: 44px;
+    left: 5px;
   }
 
   .login-button {
     padding: 1rem;
-  }
-
-  .demo-content {
-    padding: 0.75rem;
-  }
-
-  .demo-item {
-    padding: 0.75rem;
-  }
-
-  .demo-credential {
-    font-size: 0.8rem;
-  }
-
-  .quick-buttons {
-    flex-direction: column;
-  }
-
-  .quick-btn {
-    padding: 0.875rem;
   }
 }
 
@@ -758,20 +583,6 @@ label {
 
   h2 {
     font-size: 1.2rem;
-  }
-
-  .form-logo .logo-icon {
-    font-size: 2.5rem;
-  }
-
-  .demo-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .demo-credential {
-    width: 100%;
   }
 }
 
@@ -786,9 +597,7 @@ label {
 /* Touch Device Optimizations */
 @media (hover: none) and (pointer: coarse) {
   .login-button,
-  .quick-btn,
   .toggle-password,
-  .demo-header,
   .forgot-link {
     min-height: 48px;
   }
@@ -801,26 +610,20 @@ label {
 /* RTL Support */
 [dir="rtl"] .form-input {
   text-align: right;
-  padding: 0.875rem 1rem 0.875rem 3rem;
 }
 
-[dir="rtl"] .input-icon {
-  right: 1rem;
-  left: auto;
+[dir="rtl"] .password-input {
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 [dir="rtl"] .toggle-password {
   left: auto;
-  right: calc(100% - 3rem);
+  right: 10px;
 }
 
 [dir="rtl"] .forgot-password {
   text-align: right;
-}
-
-[dir="rtl"] .demo-credential {
-  text-align: right;
-  direction: ltr;
 }
 
 /* Print Styles */
@@ -834,8 +637,6 @@ label {
     border: 1px solid #ddd;
   }
 
-  .demo-info,
-  .quick-login,
   .toggle-password,
   .forgot-password {
     display: none !important;
@@ -845,7 +646,6 @@ label {
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
   .login-button,
-  .form-logo .logo-icon,
   .error-message {
     animation: none;
     transition: none;

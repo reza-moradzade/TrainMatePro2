@@ -250,6 +250,15 @@
                   <div class="exercise-header">
                     <span class="exercise-number">{{ index + 1 }}</span>
                     <span class="exercise-name">{{ exercise.name }}</span>
+                    <!-- دکمه نمایش GIF -->
+                    <button 
+                      v-if="exercise.gifUrl" 
+                      @click.stop="showExerciseGif(exercise)"
+                      class="exercise-gif-button"
+                      title="نمایش انیمیشن حرکت"
+                    >
+                      🎬
+                    </button>
                   </div>
                   
                   <div class="exercise-specs">
@@ -268,11 +277,22 @@
                   </div>
                   
                   <div class="exercise-actions">
-                    <label class="checkbox-container">
-                      <input type="checkbox" v-model="exercise.completed" @change="toggleExercise(exercise)">
-                      <span class="checkmark"></span>
-                      <span class="checkbox-label">انجام شد</span>
-                    </label>
+                    <div class="action-row">
+                      <label class="checkbox-container">
+                        <input type="checkbox" v-model="exercise.completed" @change="toggleExercise(exercise)">
+                        <span class="checkmark"></span>
+                        <span class="checkbox-label">انجام شد</span>
+                      </label>
+                      
+                      <!-- دکمه مشاهده انیمیشن -->
+                      <button 
+                        v-if="exercise.gifUrl" 
+                        @click.stop="showExerciseGif(exercise)"
+                        class="view-gif-button"
+                      >
+                        🎬 مشاهده انیمیشن
+                      </button>
+                    </div>
                   </div>
                   
                   <div class="exercise-description" v-if="exercise.description">
@@ -330,6 +350,44 @@
         <span class="fab-icon">🏋️</span>
       </button>
     </div>
+
+    <!-- NEW: Exercise GIF Modal -->
+    <div v-if="showGifModal" class="modal-overlay" @click="closeGifModal">
+      <div class="modal-content gif-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ selectedExercise?.name }}</h3>
+          <button @click="closeGifModal" class="btn-close">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <img 
+            v-if="selectedExercise?.gifUrl"
+            :src="selectedExercise.gifUrl" 
+            :alt="selectedExercise.name"
+            class="exercise-gif"
+            loading="lazy"
+          />
+          <div class="exercise-details">
+            <div class="detail-item">
+              <span class="detail-label">ست‌ها:</span>
+              <span class="detail-value">{{ selectedExercise?.sets }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">تکرار:</span>
+              <span class="detail-value">{{ selectedExercise?.reps }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">استراحت:</span>
+              <span class="detail-value">{{ selectedExercise?.restTime }}</span>
+            </div>
+          </div>
+          <div v-if="selectedExercise?.description" class="exercise-description">
+            <strong>نکات:</strong>
+            <p>{{ selectedExercise.description }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -348,6 +406,10 @@ const todayWorkout = ref(null)
 const showTodayWorkout = ref(false)
 const showSidebar = ref(false)
 const isMobile = ref(false)
+
+// NEW: GIF modal state
+const showGifModal = ref(false)
+const selectedExercise = ref(null)
 
 const stats = reactive({
   activePrograms: 0,
@@ -452,24 +514,94 @@ const calculateStats = () => {
 const loadTodayWorkout = () => {
   if (programs.value.length === 0) return
   
+  // از اولین برنامه فعال استفاده می‌کنیم
   const program = programs.value[0]
-  if (program && program.weeks.length > 0 && program.weeks[0].days.length > 0) {
-    const today = new Date().getDay()
-    const dayIndex = today === 0 ? 6 : today - 1
+  
+  if (!program || !program.weeks || program.weeks.length === 0) return
+  
+  // محاسبه هفته جاری بر اساس تاریخ شروع برنامه
+  const today = new Date()
+  const startDate = new Date(program.startDate)
+  
+  // محاسبه تعداد روزهای گذشته از شروع برنامه
+  const daysPassed = Math.floor((today - startDate) / (1000 * 60 * 60 * 24))
+  
+  // محاسبه هفته جاری (هفته‌ها از 0 شروع می‌شوند)
+  let currentWeekIndex = Math.floor(daysPassed / 7)
+  
+  // اگر هنوز برنامه شروع نشده، هفته اول را نشان بده
+  if (daysPassed < 0) {
+    currentWeekIndex = 0
+  }
+  
+  // اگر از هفته‌های برنامه گذشته، آخرین هفته را نشان بده
+  if (currentWeekIndex >= program.weeks.length) {
+    currentWeekIndex = program.weeks.length - 1
+  }
+  
+  console.log('Today:', today.toLocaleDateString('fa-IR'))
+  console.log('Program start:', startDate.toLocaleDateString('fa-IR'))
+  console.log('Days passed:', daysPassed)
+  console.log('Current week index:', currentWeekIndex + 1)
+  
+  const currentWeek = program.weeks[currentWeekIndex]
+  
+  if (currentWeek && currentWeek.days && currentWeek.days.length > 0) {
+    // روز هفته (0 = یکشنبه, 1 = دوشنبه, ...)
+    const dayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, ...
     
-    if (program.weeks[0].days[dayIndex]) {
-      const day = program.weeks[0].days[dayIndex]
+    // تبدیل به ایندکس روزهای ما (شنبه = 0, یکشنبه = 1, ...)
+    // در ایران، شنبه اولین روز هفته است
+    let dayIndex
+    if (dayOfWeek === 0) { // یکشنبه در سیستم غربی
+      dayIndex = 1 // یکشنبه در سیستم ما
+    } else if (dayOfWeek === 6) { // شنبه در سیستم غربی
+      dayIndex = 0 // شنبه در سیستم ما
+    } else {
+      dayIndex = dayOfWeek + 1 // دوشنبه به بعد
+    }
+    
+    console.log('Day of week:', dayOfWeek)
+    console.log('Day index:', dayIndex)
+    
+    if (currentWeek.days[dayIndex]) {
+      const day = currentWeek.days[dayIndex]
+      
+      // بررسی آیا این روز تمرین دارد یا استراحت
+      const hasExercises = day.exercises && day.exercises.length > 0
+      
       todayWorkout.value = {
         programId: program.id,
         programTitle: program.title,
+        weekNumber: currentWeekIndex + 1,
+        weekTitle: currentWeek.title,
         day: day,
-        exercises: day.exercises.map(ex => ({
+        dayIndex: dayIndex,
+        hasExercises: hasExercises,
+        exercises: hasExercises ? day.exercises.map(ex => ({
           ...ex,
           completed: false
-        }))
+        })) : []
       }
+      
+      console.log('Today workout loaded:', todayWorkout.value)
+    } else {
+      console.log('No workout for today')
+      todayWorkout.value = null
     }
   }
+}
+
+// NEW: Show exercise GIF
+const showExerciseGif = (exercise) => {
+  selectedExercise.value = exercise
+  showGifModal.value = true
+}
+
+// NEW: Close GIF modal
+const closeGifModal = () => {
+  showGifModal.value = false
+  selectedExercise.value = null
 }
 
 // Get program progress
@@ -1291,6 +1423,21 @@ const handleLogout = async () => {
   font-weight: 600;
   color: #333;
   font-size: 1rem;
+  flex: 1;
+}
+
+/* NEW: Exercise GIF Button */
+.exercise-gif-button {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  transition: transform 0.2s ease;
+}
+
+.exercise-gif-button:active {
+  transform: scale(1.2);
 }
 
 .exercise-specs {
@@ -1317,6 +1464,14 @@ const handleLogout = async () => {
   margin-bottom: 0.75rem;
 }
 
+.action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .checkbox-container {
   display: flex;
   align-items: center;
@@ -1329,6 +1484,23 @@ const handleLogout = async () => {
   color: #666;
 }
 
+/* NEW: View GIF Button */
+.view-gif-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.view-gif-button:active {
+  transform: scale(0.95);
+  background: #5a6fd8;
+}
+
 .exercise-description {
   background: #f8f9fa;
   padding: 0.75rem;
@@ -1337,6 +1509,47 @@ const handleLogout = async () => {
   color: #666;
   font-style: italic;
   border-right: 3px solid #ff9800;
+}
+
+/* NEW: GIF Modal */
+.gif-modal {
+  max-width: 500px;
+}
+
+.exercise-gif {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  background: #f8f9fa;
+}
+
+.exercise-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.detail-label {
+  color: #666;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.detail-value {
+  color: #333;
+  font-weight: 600;
+  font-size: 1rem;
 }
 
 /* Loading State */
@@ -1617,6 +1830,10 @@ const handleLogout = async () => {
     width: 52px;
     height: 52px;
   }
+
+  .exercise-details {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1646,6 +1863,15 @@ const handleLogout = async () => {
   .fab-button {
     width: 48px;
     height: 48px;
+  }
+
+  .action-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .view-gif-button {
+    width: 100%;
   }
 }
 

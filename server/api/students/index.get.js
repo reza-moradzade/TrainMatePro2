@@ -1,4 +1,3 @@
-
 import { Student, User } from '../../models/index.js'
 
 export default defineEventHandler(async (event) => {
@@ -23,7 +22,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    // Get coach's students - FIXED QUERY
+    // Get coach's students
     const students = await User.findAll({
       where: {
         coachId: session.userId,
@@ -38,11 +37,12 @@ export default defineEventHandler(async (event) => {
     
     console.log(`Found ${students.length} students for coach ${session.userId}`)
     
+    // Return both userId and studentId for flexibility
     return {
       success: true,
       students: students.map(student => ({
-        id: student.Student ? student.Student.id : student.id, // Return student profile ID
-        userId: student.id, // User ID
+        userId: student.id,                    // User ID (برای API لاگین)
+        studentId: student.Student ? student.Student.id : null, // Student Profile ID (برای برنامه‌ها)
         email: student.email,
         fullName: student.fullName,
         department: student.department,

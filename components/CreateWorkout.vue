@@ -61,7 +61,21 @@
             <span class="help-icon">📅</span>
             <div class="help-text">
               <strong>مرحله ۲:</strong>
-              <p>برنامه هفتگی را تنظیم کنید. برای هر روز می‌توانید حرکات مورد نظر را اضافه کنید.</p>
+              <p>برنامه هفته اول را تنظیم کنید. هفته‌های بعدی به صورت خودکار تکرار می‌شوند.</p>
+            </div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">🔄</span>
+            <div class="help-text">
+              <strong>تکرار خودکار:</strong>
+              <p>برنامه هفته اول برای تمام هفته‌های {{ form.durationWeeks }} هفته تکرار خواهد شد.</p>
+            </div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">🏋️‍♂️</span>
+            <div class="help-text">
+              <strong>انتخاب حرکت:</strong>
+              <p>برای هر حرکت می‌توانید از بین ۱۵۰۰ حرکت موجود با انیمیشن جستجو و انتخاب کنید.</p>
             </div>
           </div>
           <div class="help-item">
@@ -99,9 +113,9 @@
                   class="form-input"
                   @change="loadStudentInfo"
                 >
-                  <option value="">انتخاب شاگرد</option>
-                  <option v-for="student in students" :key="student.id" :value="student.id">
-                    {{ student.fullName }}
+                  <option value="" disabled selected>انتخاب شاگرد</option>
+                  <option v-for="student in students" :key="student.studentId" :value="student.studentId">
+                    {{ student.fullName }} - {{ student.email }}
                   </option>
                 </select>
               </div>
@@ -156,7 +170,7 @@
                     v-model="form.durationWeeks" 
                     required 
                     class="form-input"
-                    @change="calculateEndDate"
+                    @change="handleDurationChange"
                   >
                     <option value="1">۱ هفته</option>
                     <option value="2">۲ هفته</option>
@@ -198,6 +212,21 @@
             </div>
           </div>
 
+          <!-- Repetition Info Card -->
+          <div class="info-card">
+            <div class="info-header">
+              <span class="info-icon">🔄</span>
+              <h4>نحوه تکرار برنامه</h4>
+            </div>
+            <div class="info-content">
+              <p>شما فقط نیاز به تنظیم <strong>هفته اول</strong> دارید. هفته‌های بعدی به صورت خودکار از هفته اول کپی می‌شوند.</p>
+              <div class="info-highlight">
+                <span class="highlight-icon">✨</span>
+                <span>اگر نیاز به برنامه متفاوت در هفته‌ای دارید، می‌توانید آن هفته را انتخاب کرده و تغییر دهید.</span>
+              </div>
+            </div>
+          </div>
+
           <div v-if="selectedStudent" class="student-info-card">
             <div class="student-info-header">
               <span class="header-icon">👤</span>
@@ -228,45 +257,73 @@
           </div>
         </div>
 
-        <!-- Step 2: Weekly Schedule - Mobile Optimized -->
+        <!-- Step 2: Weekly Schedule with Exercise Selection -->
         <div class="form-section" v-show="currentStep === 2">
           <h3>
             <span class="section-icon">📅</span>
             برنامه هفتگی
           </h3>
           <p class="section-description">
-            برنامه تمرینی هفته اول را تنظیم کنید. این برنامه برای {{ form.durationWeeks }} هفته تکرار خواهد شد.
+            برنامه تمرینی <strong>هفته اول</strong> را تنظیم کنید. برای هر حرکت می‌توانید از بین حرکات موجود انتخاب کنید.
           </p>
 
-          <!-- Week Selector for Mobile -->
-          <div v-if="isMobile" class="week-selector">
+          <!-- Week Selector -->
+          <div class="week-selector">
             <div class="week-tabs">
               <button 
+                type="button"  
                 v-for="week in form.weeks" 
                 :key="week.weekNumber"
-                :class="{ active: selectedWeek === week.weekNumber }"
-                @click="selectedWeek = week.weekNumber"
+                :class="{ 
+                  active: selectedWeek === week.weekNumber,
+                  'first-week': week.weekNumber === 1,
+                  'repeated-week': week.weekNumber > 1 && !week.customized
+                }"
+                @click="selectWeek(week.weekNumber)"
                 class="week-tab"
               >
-                هفته {{ week.weekNumber }}
+                <span class="week-number">هفته {{ week.weekNumber }}</span>
+                <span v-if="week.weekNumber === 1" class="week-badge">اصلی</span>
+                <span v-else-if="week.customized" class="week-badge customized">✏️ سفارشی</span>
+                <span v-else class="week-badge repeated">🔄 تکراری</span>
               </button>
             </div>
+          </div>
+
+          <!-- Customization Notice -->
+          <div v-if="selectedWeek > 1 && form.weeks[selectedWeek - 1] && !form.weeks[selectedWeek - 1].customized" class="customize-notice">
+            <div class="notice-content">
+              <span class="notice-icon">ℹ️</span>
+              <p>این هفته از هفته اول کپی شده است. برای ایجاد تغییرات، گزینه زیر را فعال کنید.</p>
+            </div>
+            <button @click="customizeWeek(selectedWeek)" class="btn-customize">
+              ✏️ سفارشی‌سازی این هفته
+            </button>
+          </div>
+
+          <div v-if="selectedWeek > 1 && form.weeks[selectedWeek - 1] && form.weeks[selectedWeek - 1].customized" class="customized-badge">
+            <span class="badge-icon">✨</span>
+            <span>این هفته به صورت سفارشی تنظیم شده است</span>
           </div>
 
           <div class="weeks-container">
             <div 
               v-for="week in form.weeks" 
               :key="week.weekNumber"
-              v-show="!isMobile || week.weekNumber === selectedWeek"
+              v-show="week.weekNumber === selectedWeek"
               class="week-card"
             >
               <div class="week-header">
                 <div class="week-title">
                   <h4>{{ week.title }}</h4>
-                  <span class="week-badge">هفته {{ week.weekNumber }}</span>
+                  <div class="week-tags">
+                    <span v-if="week.weekNumber === 1" class="week-badge-main">هفته اصلی</span>
+                    <span v-else-if="week.customized" class="week-badge-custom">سفارشی</span>
+                    <span v-else class="week-badge-repeat">تکراری از هفته اول</span>
+                  </div>
                 </div>
                 <div class="week-focus">
-                  <label>تمرکز اصلی:</label>
+                  <label>تمرکز اصلی هفته:</label>
                   <input
                     v-model="week.focus"
                     type="text"
@@ -323,7 +380,7 @@
                         <h6>حرکات</h6>
                         <button 
                           type="button" 
-                          @click="addExercise(day)"
+                          @click="showExerciseSearch(day)"
                           class="btn-add-exercise"
                         >
                           <span class="btn-icon">➕</span>
@@ -339,13 +396,10 @@
                         >
                           <div class="exercise-header">
                             <div class="exercise-number">{{ exIndex + 1 }}</div>
-                            <input
-                              v-model="exercise.name"
-                              type="text"
-                              placeholder="نام حرکت"
-                              required
-                              class="exercise-name-input"
-                            />
+                            <div class="exercise-info" @click="editExercise(exercise)">
+                              <span class="exercise-name">{{ exercise.name }}</span>
+                              <span v-if="exercise.gifUrl" class="exercise-has-gif" title="دارای انیمیشن">🎬</span>
+                            </div>
                             <button 
                               type="button" 
                               @click="removeExercise(day, exIndex)"
@@ -387,7 +441,7 @@
                             </div>
                           </div>
                           
-                          <div class="exercise-notes" v-if="exercise.description || isMobile">
+                          <div class="exercise-notes">
                             <textarea
                               v-model="exercise.description"
                               placeholder="نکات فنی حرکت (اختیاری)"
@@ -410,7 +464,7 @@
           </div>
         </div>
 
-        <!-- Step 3: Review & Submit - Mobile Optimized -->
+        <!-- Step 3: Review & Submit -->
         <div class="form-section" v-show="currentStep === 3">
           <h3>
             <span class="section-icon">👁️</span>
@@ -455,15 +509,22 @@
               <div class="card-header">
                 <span class="header-icon">📅</span>
                 <h4>ساختار برنامه</h4>
+                <span class="badge-info">{{ form.durationWeeks }} هفته</span>
               </div>
               <div class="weeks-summary">
                 <div 
                   v-for="week in form.weeks" 
                   :key="week.weekNumber"
                   class="week-summary-item"
+                  :class="{ 'customized-week': week.customized }"
                 >
                   <div class="week-summary-header" @click="toggleWeekSummary(week.weekNumber)">
-                    <span class="week-title">هفته {{ week.weekNumber }}</span>
+                    <div class="week-info">
+                      <span class="week-title">هفته {{ week.weekNumber }}</span>
+                      <span v-if="week.weekNumber === 1" class="week-type-badge primary">اصلی</span>
+                      <span v-else-if="week.customized" class="week-type-badge customized">✏️ سفارشی</span>
+                      <span v-else class="week-type-badge repeated">🔄 تکراری</span>
+                    </div>
                     <span v-if="week.focus" class="week-focus-tag">{{ week.focus }}</span>
                     <span class="expand-icon">
                       {{ expandedWeek === week.weekNumber ? '▼' : '◀' }}
@@ -481,6 +542,10 @@
                         <span class="day-exercises">{{ day.exercises.length }} حرکت</span>
                       </div>
                       <div v-if="day.focus" class="day-focus">{{ day.focus }}</div>
+                      <div v-if="day.exercises.length > 0" class="exercise-preview">
+                        {{ day.exercises.slice(0, 2).map(e => e.name).join('، ') }}
+                        <span v-if="day.exercises.length > 2"> + {{ day.exercises.length - 2 }} دیگر</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -489,7 +554,7 @@
           </div>
         </div>
 
-        <!-- Navigation Buttons - Mobile Optimized -->
+        <!-- Navigation Buttons -->
         <div class="form-navigation">
           <div v-if="!isMobile" class="step-indicator">
             <span class="step" :class="{ active: currentStep === 1 }">۱</span>
@@ -549,10 +614,149 @@
         </div>
       </form>
     </div>
+
+    <!-- Exercise Selection Modal با فیلتر پیشرفته -->
+    <div v-if="showExerciseModal" class="modal-overlay" @click="closeExerciseModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>🏋️‍♂️ انتخاب حرکت ورزشی</h3>
+          <button @click="closeExerciseModal" class="close-help">✕</button>
+        </div>
+        
+        <div class="modal-body">
+          <!-- فیلترهای سریع -->
+          <div class="filter-tabs">
+            <button 
+              v-for="filter in quickFilters" 
+              :key="filter.value"
+              :class="{ active: selectedQuickFilter === filter.value }"
+              @click="setQuickFilter(filter.value)"
+              class="filter-tab"
+            >
+              {{ filter.label }}
+            </button>
+          </div>
+
+          <!-- دسته‌بندی اصلی -->
+          <div class="category-tabs">
+            <button 
+              v-for="cat in categories" 
+              :key="cat.value"
+              :class="{ active: selectedCategory === cat.value }"
+              @click="setCategory(cat.value)"
+              class="category-tab"
+            >
+              {{ cat.label }}
+            </button>
+          </div>
+
+          <!-- زیرمجموعه‌ها (بر اساس دسته انتخاب شده) -->
+          <div class="subcategory-section" v-if="subcategories.length > 0">
+            <div class="subcategory-grid">
+              <button 
+                v-for="sub in subcategories" 
+                :key="sub"
+                :class="{ active: selectedSubcategory === sub }"
+                @click="setSubcategory(sub)"
+                class="subcategory-btn"
+              >
+                {{ sub }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Search Input -->
+          <div class="search-container">
+            <div class="input-wrapper">
+              <span class="input-icon">🔍</span>
+              <input
+                v-model="exerciseSearchQuery"
+                type="text"
+                placeholder="جستجوی سریع..."
+                class="form-input"
+                @input="debouncedSearchExercises"
+              />
+              <button v-if="exerciseSearchQuery" @click="clearSearch" class="clear-search">
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <!-- نتایج -->
+          <div class="results-section">
+            <!-- تعداد نتایج -->
+            <div class="results-count" v-if="!searchLoading && filteredExercises.length > 0">
+              {{ filteredExercises.length }} حرکت یافت شد
+            </div>
+
+            <!-- Loading -->
+            <div v-if="searchLoading" class="loading-state">
+              <div class="spinner"></div>
+              <p>در حال جستجو...</p>
+            </div>
+
+            <!-- نتایج -->
+            <div v-else-if="filteredExercises.length > 0" class="search-results">
+              <div 
+                v-for="exercise in filteredExercises" 
+                :key="exercise.exerciseId"
+                class="search-result-item"
+                @click="selectExercise(exercise)"
+              >
+                <div class="result-gif">
+                  <img :src="exercise.gifUrl" :alt="exercise.name" loading="lazy" />
+                </div>
+                <div class="result-info">
+                  <div class="result-name">{{ exercise.name }}</div>
+                  <div class="result-tags">
+                    <span class="result-tag muscle">{{ exercise.targetMuscles?.[0] || 'عضله' }}</span>
+                    <span class="result-tag equipment">{{ exercise.equipments?.[0] || 'وسیله' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Load More -->
+              <div v-if="hasMoreResults" class="load-more">
+                <button @click="loadMoreExercises" class="btn-secondary">
+                  بیشتر...
+                </button>
+              </div>
+            </div>
+
+            <!-- بدون نتیجه -->
+            <div v-else-if="exerciseSearchQuery" class="no-results">
+              <span class="empty-icon">😕</span>
+              <p>حرکتی با این مشخصات یافت نشد</p>
+              <button @click="clearFilters" class="btn-clear">
+                🗑️ پاک کردن فیلترها
+              </button>
+            </div>
+
+            <!-- حالت پیش‌فرض (پرطرفدارها) -->
+            <div v-else class="popular-section">
+              <h4>حرکات پرطرفدار</h4>
+              <div class="popular-grid">
+                <div 
+                  v-for="exercise in popularExercises" 
+                  :key="exercise.exerciseId"
+                  class="popular-item"
+                  @click="selectExercise(exercise)"
+                >
+                  <img :src="exercise.gifUrl" :alt="exercise.name" loading="lazy" />
+                  <span>{{ exercise.name }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+
 // Reactive form state
 const form = reactive({
   studentId: '',
@@ -577,6 +781,54 @@ const selectedWeek = ref(1)
 const expandedDay = ref(null)
 const expandedWeek = ref(null)
 
+// Exercise search states
+const showExerciseModal = ref(false)
+const exerciseSearchQuery = ref('')
+const allExercises = ref([])
+const filteredExercises = ref([])
+const searchLoading = ref(false)
+const searchOffset = ref(0)
+const hasMoreResults = ref(false)
+const currentTargetDay = ref(null)
+
+// Filter states
+const selectedQuickFilter = ref('all')
+const selectedCategory = ref('all')
+const selectedSubcategory = ref('')
+
+// داده‌های فیلتر
+const quickFilters = [
+  { value: 'all', label: 'همه' },
+  { value: 'chest', label: 'سینه' },
+  { value: 'back', label: 'پشت' },
+  { value: 'legs', label: 'پا' },
+  { value: 'shoulders', label: 'سرشانه' },
+  { value: 'arms', label: 'بازو' },
+  { value: 'abs', label: 'شکم' }
+]
+
+const categories = [
+  { value: 'all', label: 'همه دسته‌ها' },
+  { value: 'muscle', label: 'عضله هدف' },
+  { value: 'bodypart', label: 'بخش بدن' },
+  { value: 'equipment', label: 'وسیله' }
+]
+
+// زیرمجموعه‌های داینامیک
+const subcategories = computed(() => {
+  if (selectedCategory.value === 'muscle') {
+    return ['سینه', 'پشت', 'پا', 'سرشانه', 'جلو بازو', 'پشت بازو', 'شکم', 'پایین تنه']
+  } else if (selectedCategory.value === 'bodypart') {
+    return ['بالاتنه', 'پایین تنه', 'کل بدن', 'بازوها', 'پاها', 'شکم']
+  } else if (selectedCategory.value === 'equipment') {
+    return ['دمبل', 'هالتر', 'کابل', 'بدون وسیله', 'کتل بل', 'ماشین', 'کش']
+  }
+  return []
+})
+
+// Popular exercises (cache)
+const popularExercises = ref([])
+
 // Days of week in Persian
 const persianDays = {
   saturday: 'شنبه',
@@ -588,15 +840,13 @@ const persianDays = {
   friday: 'جمعه'
 }
 
+// Debounce timer
+let searchTimer = null
+
 // Computed
 const progressPercentage = computed(() => {
   return (currentStep.value / 3) * 100
 })
-
-// Check if device is mobile
-const checkMobile = () => {
-  isMobile.value = window.innerWidth <= 768
-}
 
 // Lifecycle hooks
 onMounted(async () => {
@@ -604,6 +854,8 @@ onMounted(async () => {
   window.addEventListener('resize', checkMobile)
   await fetchStudents()
   initializeWeeks()
+  await loadAllExercises()
+  await loadPopularExercises()
   
   // Set default start date to tomorrow
   const tomorrow = new Date()
@@ -614,15 +866,78 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', checkMobile)
+  if (searchTimer) clearTimeout(searchTimer)
 })
 
-// Initialize form with default weeks and days
+// Check if device is mobile
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768
+}
+
+// Initialize weeks with first week as template
 const initializeWeeks = () => {
   const weeks = []
   const dayNames = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday']
   
-  for (let weekNum = 1; weekNum <= form.durationWeeks; weekNum++) {
-    const days = dayNames.map((dayName, index) => ({
+  // Create first week (template)
+  const firstWeekDays = dayNames.map((dayName, index) => ({
+    dayNumber: index + 1,
+    dayName: dayName,
+    title: `روز ${index + 1}`,
+    focus: '',
+    duration: 60,
+    notes: '',
+    exercises: []
+  }))
+  
+  const firstWeek = {
+    weekNumber: 1,
+    title: `هفته ۱`,
+    focus: '',
+    notes: '',
+    days: firstWeekDays,
+    isTemplate: true
+  }
+  
+  weeks.push(firstWeek)
+  
+  // Create remaining weeks based on first week
+  for (let weekNum = 2; weekNum <= form.durationWeeks; weekNum++) {
+    // Deep clone the first week's days
+    const clonedDays = firstWeekDays.map(day => ({
+      ...day,
+      exercises: [] // Start with empty exercises, will be filled when customizing
+    }))
+    
+    weeks.push({
+      weekNumber: weekNum,
+      title: `هفته ${weekNum}`,
+      focus: firstWeek.focus,
+      notes: firstWeek.notes,
+      days: clonedDays,
+      customized: false // Flag to indicate if this week has been customized
+    })
+  }
+  
+  form.weeks = weeks
+  selectedWeek.value = 1
+}
+
+// Handle duration change - rebuild weeks
+const handleDurationChange = () => {
+  calculateEndDate()
+  
+  // Keep first week's data if exists
+  const firstWeek = form.weeks.length > 0 ? form.weeks[0] : null
+  
+  const weeks = []
+  const dayNames = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday']
+  
+  // Create or keep first week
+  if (firstWeek) {
+    weeks.push(firstWeek)
+  } else {
+    const firstWeekDays = dayNames.map((dayName, index) => ({
       dayNumber: index + 1,
       dayName: dayName,
       title: `روز ${index + 1}`,
@@ -633,24 +948,71 @@ const initializeWeeks = () => {
     }))
     
     weeks.push({
-      weekNumber: weekNum,
-      title: `هفته ${weekNum}`,
+      weekNumber: 1,
+      title: `هفته ۱`,
       focus: '',
       notes: '',
-      days: days
+      days: firstWeekDays,
+      isTemplate: true
     })
   }
   
-  form.weeks = weeks
-  selectedWeek.value = 1
+  // Create or update remaining weeks
+  for (let weekNum = 2; weekNum <= form.durationWeeks; weekNum++) {
+    const existingWeek = form.weeks.find(w => w.weekNumber === weekNum)
+    
+    if (existingWeek && existingWeek.customized) {
+      // Keep customized week
+      weeks.push(existingWeek)
+    } else {
+      // Create new week based on first week
+      const firstWeekDays = weeks[0].days.map(day => ({
+        dayNumber: day.dayNumber,
+        dayName: day.dayName,
+        title: day.title,
+        focus: '',
+        duration: day.duration,
+        notes: '',
+        exercises: [] // Empty exercises for non-customized weeks
+      }))
+      
+      weeks.push({
+        weekNumber: weekNum,
+        title: `هفته ${weekNum}`,
+        focus: weeks[0].focus,
+        notes: weeks[0].notes,
+        days: firstWeekDays,
+        customized: false
+      })
+    }
+  }
+  
+  // Remove extra weeks if duration decreased
+  if (form.weeks.length > form.durationWeeks) {
+    form.weeks = weeks
+  } else {
+    form.weeks = weeks
+  }
+  
+  // Reset selected week if out of range
+  if (selectedWeek.value > form.durationWeeks) {
+    selectedWeek.value = 1
+  }
 }
 
 // Fetch students from API
 const fetchStudents = async () => {
   try {
     const response = await $fetch('/api/students')
+    
     if (response.success) {
       students.value = response.students
+      
+      // Auto-select if only one student
+      if (students.value.length === 1) {
+        form.studentId = students.value[0].studentId
+        await loadStudentInfo()
+      }
     }
   } catch (err) {
     console.error('Error fetching students:', err)
@@ -659,11 +1021,48 @@ const fetchStudents = async () => {
 }
 
 // Load student info when selected
-const loadStudentInfo = () => {
+const loadStudentInfo = async () => {
   if (form.studentId) {
-    selectedStudent.value = students.value.find(s => s.id == form.studentId) || null
+    selectedStudent.value = students.value.find(s => String(s.studentId) === String(form.studentId)) || null
+    
+    if (!selectedStudent.value) {
+      error.value = 'شاگرد مورد نظر یافت نشد'
+      setTimeout(() => {
+        error.value = ''
+      }, 3000)
+    }
   } else {
     selectedStudent.value = null
+  }
+}
+
+// Select a week to view/edit
+const selectWeek = (weekNumber) => {
+  selectedWeek.value = weekNumber
+}
+
+// Customize a specific week
+const customizeWeek = (weekNumber) => {
+  const week = form.weeks.find(w => w.weekNumber === weekNumber)
+  if (week) {
+    week.customized = true
+    
+    // Copy exercises from first week if they want to start from template
+    if (weekNumber > 1 && form.weeks[0]) {
+      const firstWeek = form.weeks[0]
+      week.days.forEach((day, dayIndex) => {
+        if (firstWeek.days[dayIndex]) {
+          // Deep copy exercises from first week
+          day.exercises = JSON.parse(JSON.stringify(firstWeek.days[dayIndex].exercises || []))
+        }
+      })
+    }
+    
+    // Show success message
+    successMessage.value = `هفته ${weekNumber} برای ویرایش فعال شد`
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 3000)
   }
 }
 
@@ -694,7 +1093,8 @@ const getFitnessLevelText = (level) => {
 
 // Get student name by ID
 const getStudentName = (studentId) => {
-  const student = students.value.find(s => s.id == studentId)
+  if (!studentId) return 'انتخاب نشده'
+  const student = students.value.find(s => String(s.studentId) === String(studentId))
   return student ? student.fullName : 'نامشخص'
 }
 
@@ -705,16 +1105,209 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('fa-IR')
 }
 
+// ==================== EXERCISE API FUNCTIONS ====================
+const loadAllExercises = async () => {
+  try {
+    const response = await $fetch('/api/exercises/search?q=a&limit=100')
+    if (response.success) {
+      allExercises.value = response.exercises
+      filteredExercises.value = response.exercises
+    }
+  } catch (err) {
+    console.error('Error loading exercises:', err)
+  }
+}
+
+const loadPopularExercises = async () => {
+  try {
+    // Load some popular exercises
+    const response = await $fetch('/api/exercises/search?q=press&limit=12')
+    if (response.success) {
+      popularExercises.value = response.exercises.slice(0, 8)
+    }
+  } catch (err) {
+    console.error('Error loading popular exercises:', err)
+  }
+}
+
+// تنظیم فیلتر سریع
+const setQuickFilter = (filter) => {
+  selectedQuickFilter.value = filter
+  filterExercises()
+}
+
+// تنظیم دسته‌بندی
+const setCategory = (category) => {
+  selectedCategory.value = category
+  selectedSubcategory.value = ''
+  filterExercises()
+}
+
+// تنظیم زیرمجموعه
+const setSubcategory = (sub) => {
+  selectedSubcategory.value = sub
+  filterExercises()
+}
+
+// پاک کردن فیلترها
+const clearFilters = () => {
+  selectedQuickFilter.value = 'all'
+  selectedCategory.value = 'all'
+  selectedSubcategory.value = ''
+  exerciseSearchQuery.value = ''
+  filteredExercises.value = allExercises.value
+}
+
+// پاک کردن جستجو
+const clearSearch = () => {
+  exerciseSearchQuery.value = ''
+  filterExercises()
+}
+
+// فیلتر کردن تمرینات
+const filterExercises = () => {
+  let filtered = [...allExercises.value]
+
+  // فیلتر بر اساس جستجو
+  if (exerciseSearchQuery.value) {
+    const query = exerciseSearchQuery.value.toLowerCase()
+    filtered = filtered.filter(ex => 
+      ex.name.toLowerCase().includes(query) ||
+      ex.targetMuscles?.some(m => m.toLowerCase().includes(query)) ||
+      ex.equipments?.some(e => e.toLowerCase().includes(query))
+    )
+  }
+
+  // فیلتر بر اساس دسته سریع
+  if (selectedQuickFilter.value !== 'all') {
+    filtered = filtered.filter(ex => 
+      ex.targetMuscles?.some(m => 
+        m.toLowerCase().includes(selectedQuickFilter.value.toLowerCase())
+      )
+    )
+  }
+
+  // فیلتر بر اساس زیرمجموعه
+  if (selectedSubcategory.value) {
+    filtered = filtered.filter(ex => {
+      if (selectedCategory.value === 'muscle') {
+        return ex.targetMuscles?.some(m => 
+          m.toLowerCase().includes(selectedSubcategory.value.toLowerCase())
+        )
+      } else if (selectedCategory.value === 'bodypart') {
+        return ex.bodyParts?.some(b => 
+          b.toLowerCase().includes(selectedSubcategory.value.toLowerCase())
+        )
+      } else if (selectedCategory.value === 'equipment') {
+        return ex.equipments?.some(e => 
+          e.toLowerCase().includes(selectedSubcategory.value.toLowerCase())
+        )
+      }
+      return true
+    })
+  }
+
+  filteredExercises.value = filtered
+  searchOffset.value = 0
+}
+
+const searchExercises = async (reset = true) => {
+  filterExercises()
+  searchLoading.value = false
+}
+
+const debouncedSearchExercises = () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    searchExercises(true)
+  }, 300)
+}
+
+const loadMoreExercises = () => {
+  // اینجا می‌تونی صفحه‌بندی رو پیاده‌سازی کنی
+  searchOffset.value += 20
+}
+
+// ==================== EXERCISE MODAL FUNCTIONS ====================
+const showExerciseSearch = (day) => {
+  currentTargetDay.value = day
+  showExerciseModal.value = true
+  clearFilters()
+}
+
+const closeExerciseModal = () => {
+  showExerciseModal.value = false
+  currentTargetDay.value = null
+}
+
+const syncExercisesToDatabase = async (exercises) => {
+  try {
+    const uniqueExercises = []
+    const seenIds = new Set()
+    
+    // استخراج حرکات یکتا
+    exercises.forEach(ex => {
+      if (ex.exerciseId && !seenIds.has(ex.exerciseId)) {
+        seenIds.add(ex.exerciseId)
+        uniqueExercises.push({
+          exerciseId: ex.exerciseId,
+          name: ex.name,
+          gifUrl: ex.gifUrl,
+          targetMuscles: ex.targetMuscles || []
+        })
+      }
+    })
+    
+    if (uniqueExercises.length === 0) return
+    
+    // ارسال به API برای همگام‌سازی
+    const response = await $fetch('/api/exercises/sync', {
+      method: 'POST',
+      body: { exercises: uniqueExercises },
+      headers: { 'Content-Type': 'application/json' }
+    })
+    
+    console.log('Exercises synced:', response)
+    
+  } catch (err) {
+    console.error('Error syncing exercises:', err)
+  }
+}
+
+const selectExercise = (exercise) => {
+  if (currentTargetDay.value) {
+    // Add exercise to current day
+    currentTargetDay.value.exercises.push({
+      exerciseId: exercise.exerciseId,
+      name: exercise.name,
+      description: exercise.instructions ? exercise.instructions[0] : '',
+      sets: 3,
+      reps: '10-12',
+      restTime: '60-90',
+      gifUrl: exercise.gifUrl,
+      targetMuscles: exercise.targetMuscles
+    })
+    
+    // Show success message
+    successMessage.value = `حرکت "${exercise.name}" اضافه شد`
+    setTimeout(() => { successMessage.value = '' }, 2000)
+    
+    // Auto-expand this day on mobile
+    if (isMobile.value && currentTargetDay.value) {
+      expandedDay.value = currentTargetDay.value.dayNumber
+    }
+  }
+  
+  closeExerciseModal()
+}
+
+const editExercise = (exercise) => {
+  console.log('Edit exercise:', exercise)
+}
+
 // Add exercise to a day
 const addExercise = (day) => {
-  day.exercises.push({
-    name: '',
-    description: '',
-    sets: 3,
-    reps: '10-12',
-    restTime: '60-90',
-    notes: ''
-  })
+  showExerciseSearch(day)
 }
 
 // Remove exercise from a day
@@ -736,39 +1329,43 @@ const toggleWeekSummary = (weekNumber) => {
 const nextStep = () => {
   // Validate current step
   if (currentStep.value === 1) {
-    if (!form.studentId || !form.title || !form.startDate) {
-      error.value = 'لطفاً فیلدهای الزامی مرحله اول را پر کنید'
+    if (!form.studentId || form.studentId === '') {
+      error.value = 'لطفاً یک شاگرد انتخاب کنید'
       return
-    }
-  } else if (currentStep.value === 2) {
-    // Check if all required exercise fields are filled
-    let hasError = false
-    for (const week of form.weeks) {
-      for (const day of week.days) {
-        for (const exercise of day.exercises) {
-          if (!exercise.name || !exercise.sets || !exercise.reps) {
-            hasError = true
-            break
-          }
-        }
-        if (hasError) break
-      }
-      if (hasError) break
     }
     
-    if (hasError) {
-      error.value = 'لطفاً تمام فیلدهای الزامی حرکات را پر کنید'
+    if (!form.title || form.title.trim() === '') {
+      error.value = 'لطفاً عنوان برنامه را وارد کنید'
       return
     }
-  }
-  
-  error.value = ''
-  if (currentStep.value < 3) {
-    currentStep.value++
-    if (isMobile.value) {
-      expandedDay.value = null
-      expandedWeek.value = null
+    
+    if (!form.startDate || form.startDate === '') {
+      error.value = 'لطفاً تاریخ شروع را انتخاب کنید'
+      return
     }
+    
+    error.value = ''
+    currentStep.value++
+    
+  } else if (currentStep.value === 2) {
+    // Check if first week has exercises
+    const firstWeek = form.weeks[0]
+    let hasExercises = false
+    
+    for (const day of firstWeek.days) {
+      if (day.exercises && day.exercises.length > 0) {
+        hasExercises = true
+        break
+      }
+    }
+    
+    if (!hasExercises) {
+      error.value = 'حداقل یک حرکت برای هفته اول اضافه کنید'
+      return
+    }
+    
+    error.value = ''
+    currentStep.value++
   }
 }
 
@@ -785,22 +1382,79 @@ const handleSubmit = async () => {
     loading.value = true
     error.value = ''
     
-    // Prepare data for API
+    const selectedStudentObj = students.value.find(s => String(s.studentId) === String(form.studentId))
+    
+    if (!selectedStudentObj) {
+      error.value = 'شاگرد مورد نظر یافت نشد'
+      loading.value = false
+      return
+    }
+    
+    // ========== STEP 1: جمع‌آوری و همگام‌سازی حرکات ==========
+    const allExercises = []
+    form.weeks.forEach(week => {
+      week.days.forEach(day => {
+        day.exercises.forEach(ex => {
+          if (ex.exerciseId) {
+            allExercises.push({
+              exerciseId: ex.exerciseId,
+              name: ex.name,
+              gifUrl: ex.gifUrl,
+              targetMuscles: ex.targetMuscles || [],
+              bodyParts: ex.bodyParts || [],
+              equipments: ex.equipments || [],
+              secondaryMuscles: ex.secondaryMuscles || [],
+              instructions: ex.instructions || []
+            })
+          }
+        })
+      })
+    })
+    
+    // اگر حرکتی وجود داشت، با API همگام‌سازی کن
+    if (allExercises.length > 0) {
+      try {
+        const syncResponse = await $fetch('/api/exercises/sync', {
+          method: 'POST',
+          body: { exercises: allExercises },
+          headers: { 'Content-Type': 'application/json' }
+        })
+        console.log('✅ Exercises synced:', syncResponse)
+      } catch (syncErr) {
+        console.error('⚠️ Error syncing exercises (continuing anyway):', syncErr)
+        // ادامه می‌دیم حتی اگر sync خطا بده
+      }
+    }
+    
+    // ========== STEP 2: ایجاد برنامه تمرینی ==========
     const workoutData = {
-      studentId: parseInt(form.studentId),
+      studentId: parseInt(selectedStudentObj.studentId),
       title: form.title,
-      description: form.description,
+      description: form.description || '',
       startDate: form.startDate,
       endDate: form.endDate,
       durationWeeks: parseInt(form.durationWeeks),
-      weeks: form.weeks
+      weeks: form.weeks.map(week => ({
+        ...week,
+        days: week.days.map(day => ({
+          ...day,
+          exercises: day.exercises.map(ex => ({
+            ...ex,
+            // مطمئن می‌شیم exerciseId حتماً ارسال بشه
+            exerciseId: ex.exerciseId || null
+          }))
+        }))
+      }))
     }
     
-    console.log('Submitting workout data:', workoutData)
+    console.log('📤 Submitting workout data:', JSON.stringify(workoutData, null, 2))
     
     const response = await $fetch('/api/workouts/create', {
       method: 'POST',
-      body: workoutData
+      body: workoutData,
+      headers: {
+        'Content-Type': 'application/json'
+      }
     })
     
     if (response.success) {
@@ -822,13 +1476,14 @@ const handleSubmit = async () => {
         selectedStudent.value = null
         successMessage.value = ''
         currentStep.value = 1
+        selectedWeek.value = 1
         expandedDay.value = null
         expandedWeek.value = null
       }, 3000)
     }
     
   } catch (err) {
-    console.error('Error creating workout:', err)
+    console.error('❌ Error creating workout:', err)
     error.value = err.data?.statusMessage || 'خطا در ایجاد برنامه تمرینی'
   } finally {
     loading.value = false
@@ -837,6 +1492,7 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
+/* تمام استایل‌های قبلی بدون تغییر می‌مانند */
 .create-workout-page {
   direction: rtl;
   max-width: 1200px;
@@ -970,6 +1626,57 @@ const handleSubmit = async () => {
 .progress-step.active .step-label {
   color: #667eea;
   font-weight: 600;
+}
+
+/* Info Card */
+.info-card {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 1px solid #90caf9;
+  border-radius: 16px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.info-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.info-icon {
+  font-size: 1.3rem;
+}
+
+.info-header h4 {
+  margin: 0;
+  color: #1976d2;
+  font-size: 1.1rem;
+}
+
+.info-content p {
+  margin: 0 0 1rem 0;
+  color: #444;
+  line-height: 1.6;
+}
+
+.info-highlight {
+  background: white;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-right: 3px solid #1976d2;
+}
+
+.highlight-icon {
+  font-size: 1.1rem;
+}
+
+.info-highlight span {
+  color: #1976d2;
+  font-size: 0.95rem;
 }
 
 /* Form Container */
@@ -1163,10 +1870,13 @@ textarea.form-input {
   border-radius: 20px;
 }
 
-/* Week Selector - Mobile */
+/* Week Selector */
 .week-selector {
   margin-bottom: 1.5rem;
   overflow-x: auto;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 16px;
 }
 
 .week-tabs {
@@ -1176,9 +1886,9 @@ textarea.form-input {
 }
 
 .week-tab {
-  padding: 0.5rem 1.25rem;
+  padding: 0.75rem 1rem;
   border: 2px solid #e1e5e9;
-  border-radius: 25px;
+  border-radius: 12px;
   background: white;
   color: #666;
   font-size: 0.9rem;
@@ -1186,12 +1896,127 @@ textarea.form-input {
   cursor: pointer;
   transition: all 0.3s ease;
   white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 90px;
+}
+
+.week-tab:hover {
+  border-color: #667eea;
 }
 
 .week-tab.active {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-color: transparent;
+}
+
+.week-tab.first-week {
+  border-color: #4caf50;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.week-tab.first-week.active {
+  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+  color: white;
+}
+
+.week-tab.repeated-week {
+  border-color: #ff9800;
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.week-tab.repeated-week.active {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+}
+
+.week-number {
+  font-weight: 600;
+}
+
+.week-badge {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.week-badge.customized {
+  background: #4caf50;
+  color: white;
+}
+
+.week-badge.repeated {
+  background: #ff9800;
+  color: white;
+}
+
+/* Customize Notice */
+.customize-notice {
+  background: #fff3e0;
+  border: 1px solid #ffb74d;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.notice-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #e65100;
+}
+
+.notice-icon {
+  font-size: 1.2rem;
+}
+
+.notice-content p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.btn-customize {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-customize:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.customized-badge {
+  background: #4caf50;
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.badge-icon {
+  font-size: 1.1rem;
 }
 
 /* Week Card */
@@ -1214,6 +2039,8 @@ textarea.form-input {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .week-title h4 {
@@ -1222,12 +2049,35 @@ textarea.form-input {
   font-size: 1.2rem;
 }
 
-.week-badge {
+.week-tags {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.week-badge-main {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 0.25rem 1rem;
   border-radius: 20px;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.week-badge-custom {
+  background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+  color: white;
+  padding: 0.25rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.week-badge-repeat {
+  background: #ff9800;
+  color: white;
+  padding: 0.25rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
@@ -1379,12 +2229,35 @@ textarea.form-input {
   flex-shrink: 0;
 }
 
-.exercise-name-input {
+/* NEW: Exercise info styling */
+.exercise-info {
   flex: 1;
-  padding: 0.6rem;
-  border: 2px solid #e1e5e9;
-  border-radius: 8px;
-  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.exercise-name {
+  color: #333;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exercise-has-gif {
+  font-size: 0.9rem;
+  background: #667eea;
+  color: white;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .btn-remove {
@@ -1496,6 +2369,16 @@ textarea.form-input {
   font-size: 1.1rem;
 }
 
+.badge-info {
+  background: #667eea;
+  color: white;
+  padding: 0.2rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-right: auto;
+}
+
 .summary-content {
   display: flex;
   flex-direction: column;
@@ -1539,6 +2422,12 @@ textarea.form-input {
   border: 1px solid #e9ecef;
   border-radius: 10px;
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.week-summary-item.customized-week {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 1px #4caf50;
 }
 
 .week-summary-header {
@@ -1550,9 +2439,37 @@ textarea.form-input {
   cursor: pointer;
 }
 
+.week-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .week-title {
   font-weight: 600;
   color: #333;
+}
+
+.week-type-badge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.week-type-badge.primary {
+  background: #667eea;
+  color: white;
+}
+
+.week-type-badge.customized {
+  background: #4caf50;
+  color: white;
+}
+
+.week-type-badge.repeated {
+  background: #ff9800;
+  color: white;
 }
 
 .week-focus-tag {
@@ -1602,6 +2519,16 @@ textarea.form-input {
 .day-focus {
   color: #666;
   font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.exercise-preview {
+  color: #888;
+  font-size: 0.8rem;
+  background: #f8f9fa;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.25rem;
 }
 
 /* Navigation */
@@ -1891,6 +2818,353 @@ textarea.form-input {
   }
 }
 
+/* ==================== EXERCISE SEARCH MODAL STYLES ==================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 10;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.modal-body {
+  padding: 1.25rem;
+}
+
+/* Filter Tabs */
+.filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.filter-tab {
+  padding: 0.5rem 1rem;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  background: white;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.filter-tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+}
+
+/* Category Tabs */
+.category-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.category-tab {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px;
+  background: white;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.category-tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+}
+
+/* Subcategory Grid */
+.subcategory-section {
+  margin-bottom: 1.5rem;
+}
+
+.subcategory-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.subcategory-btn {
+  padding: 0.5rem 1rem;
+  border: 2px solid #e1e5e9;
+  border-radius: 20px;
+  background: white;
+  color: #666;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.subcategory-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+}
+
+/* Search Container */
+.search-container {
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.clear-search {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+}
+
+.clear-search:hover {
+  background: #f0f0f0;
+}
+
+/* Results Section */
+.results-section {
+  margin-top: 1rem;
+}
+
+.results-count {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+/* Search Results */
+.search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.search-result-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.search-result-item:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.1);
+}
+
+.result-gif {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.result-gif img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.result-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.result-tags {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.result-tag {
+  background: #eef2ff;
+  color: #667eea;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+.result-tag.muscle {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.result-tag.equipment {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 0;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+/* No Results */
+.no-results {
+  text-align: center;
+  padding: 3rem 0;
+  color: #666;
+}
+
+.no-results .empty-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.btn-clear {
+  background: #f5f5f5;
+  border: 2px solid #e0e0e0;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  color: #666;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: all 0.3s ease;
+}
+
+.btn-clear:hover {
+  background: #e0e0e0;
+}
+
+/* Popular Section */
+.popular-section {
+  margin-top: 1rem;
+}
+
+.popular-section h4 {
+  color: #444;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.popular-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.popular-item {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  padding: 0.75rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.popular-item:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+}
+
+.popular-item img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.popular-item span {
+  font-size: 0.8rem;
+  color: #333;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Load More */
+.load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  padding: 1rem;
+}
+
 /* Mobile Styles */
 @media (max-width: 768px) {
   .create-workout-page {
@@ -1926,6 +3200,22 @@ textarea.form-input {
     margin-bottom: 0;
   }
 
+  .info-card {
+    padding: 1rem;
+  }
+
+  .info-content p {
+    font-size: 0.9rem;
+  }
+
+  .info-highlight {
+    padding: 0.5rem;
+  }
+
+  .info-highlight span {
+    font-size: 0.85rem;
+  }
+
   .student-info-card {
     padding: 1.25rem;
   }
@@ -1942,12 +3232,31 @@ textarea.form-input {
     min-width: 60px;
   }
 
+  .week-tabs {
+    flex-wrap: wrap;
+  }
+
+  .week-tab {
+    min-width: 70px;
+    padding: 0.5rem;
+  }
+
+  .customize-notice {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .btn-customize {
+    width: 100%;
+  }
+
   .week-card {
     padding: 1.25rem;
   }
 
-  .week-title h4 {
-    font-size: 1.1rem;
+  .week-title {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .exercise-details {
@@ -1998,6 +3307,42 @@ textarea.form-input {
     flex-direction: column;
     text-align: center;
     padding: 1rem;
+  }
+
+  /* Modal mobile styles */
+  .modal-content {
+    max-height: 90vh;
+  }
+
+  .filter-tabs {
+    flex-wrap: wrap;
+  }
+
+  .filter-tab {
+    flex: 1;
+    text-align: center;
+  }
+
+  .category-tabs {
+    flex-direction: column;
+  }
+
+  .subcategory-grid {
+    justify-content: center;
+  }
+
+  .result-gif {
+    width: 60px;
+    height: 60px;
+  }
+
+  .popular-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .exercise-info {
+    min-width: auto;
+    max-width: calc(100% - 40px);
   }
 }
 
@@ -2054,6 +3399,27 @@ textarea.form-input {
     top: -0.5rem;
     right: -0.5rem;
   }
+
+  .modal-header {
+    padding: 1rem;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .result-gif {
+    width: 50px;
+    height: 50px;
+  }
+
+  .result-name {
+    font-size: 0.9rem;
+  }
+
+  .result-tag {
+    font-size: 0.65rem;
+  }
 }
 
 /* Touch Device Optimizations */
@@ -2065,7 +3431,10 @@ textarea.form-input {
   .btn-success,
   .btn-add-exercise,
   .week-tab,
-  .day-header {
+  .day-header,
+  .filter-tab,
+  .category-tab,
+  .subcategory-btn {
     min-height: 48px;
   }
 
@@ -2114,6 +3483,11 @@ textarea.form-input {
   right: auto;
 }
 
+[dir="rtl"] .clear-search {
+  left: 1rem;
+  right: auto;
+}
+
 /* Safe Area Support */
 @supports (padding: max(0px)) {
   .create-workout-page {
@@ -2123,6 +3497,10 @@ textarea.form-input {
   .help-content {
     margin-bottom: env(safe-area-inset-bottom);
   }
+
+  .modal-content {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* Reduced Motion */
@@ -2131,7 +3509,10 @@ textarea.form-input {
   .btn-primary,
   .btn-success,
   .btn-add-exercise,
-  .help-content {
+  .help-content,
+  .search-result-item,
+  .popular-item,
+  .spinner {
     animation: none;
     transition: none;
   }
