@@ -1,97 +1,14 @@
 <template>
   <div class="create-workout-page">
-    <!-- Page Header - Responsive -->
     <div class="page-header">
       <div class="header-top">
-        <button v-if="isMobile && currentStep > 1" @click="prevStep" class="back-button">
-          <span class="back-icon">←</span>
-        </button>
         <div class="header-title">
           <h1>🏋️‍♂️ ایجاد برنامه تمرینی</h1>
-          <p>برنامه‌ای برای شاگرد خود ایجاد کنید</p>
-        </div>
-        <button v-if="isMobile" @click="showHelp = !showHelp" class="help-button">
-          <span class="help-icon">❓</span>
-        </button>
-      </div>
-
-      <!-- Progress Bar - Mobile -->
-      <div v-if="isMobile" class="progress-bar-container">
-        <div class="progress-bar" :style="{ width: progressPercentage + '%' }"></div>
-        <div class="progress-steps">
-          <div class="progress-step" :class="{ active: currentStep >= 1 }">
-            <span class="step-number">۱</span>
-            <span class="step-label">اطلاعات</span>
-          </div>
-          <div class="progress-step" :class="{ active: currentStep >= 2 }">
-            <span class="step-number">۲</span>
-            <span class="step-label">برنامه</span>
-          </div>
-          <div class="progress-step" :class="{ active: currentStep >= 3 }">
-            <span class="step-number">۳</span>
-            <span class="step-label">مرور</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Desktop Step Indicator -->
-      <div v-else class="step-indicator">
-        <span class="step" :class="{ active: currentStep === 1 }">۱</span>
-        <span class="step" :class="{ active: currentStep === 2 }">۲</span>
-        <span class="step" :class="{ active: currentStep === 3 }">۳</span>
-      </div>
-    </div>
-
-    <!-- Help Modal - Mobile -->
-    <div v-if="showHelp" class="help-modal" @click="showHelp = false">
-      <div class="help-content" @click.stop>
-        <div class="help-header">
-          <h3>📋 راهنمای ایجاد برنامه</h3>
-          <button @click="showHelp = false" class="close-help">✕</button>
-        </div>
-        <div class="help-body">
-          <div class="help-item">
-            <span class="help-icon">📝</span>
-            <div class="help-text">
-              <strong>مرحله ۱:</strong>
-              <p>اطلاعات اولیه برنامه را وارد کنید. شاگرد، عنوان و تاریخ شروع را انتخاب کنید.</p>
-            </div>
-          </div>
-          <div class="help-item">
-            <span class="help-icon">📅</span>
-            <div class="help-text">
-              <strong>مرحله ۲:</strong>
-              <p>برنامه هفته اول را تنظیم کنید. هفته‌های بعدی به صورت خودکار تکرار می‌شوند.</p>
-            </div>
-          </div>
-          <div class="help-item">
-            <span class="help-icon">🔄</span>
-            <div class="help-text">
-              <strong>تکرار خودکار:</strong>
-              <p>برنامه هفته اول برای تمام هفته‌های {{ form.durationWeeks }} هفته تکرار خواهد شد.</p>
-            </div>
-          </div>
-          <div class="help-item">
-            <span class="help-icon">🏋️‍♂️</span>
-            <div class="help-text">
-              <strong>انتخاب حرکت:</strong>
-              <p>برای هر حرکت می‌توانید از بین ۱۵۰۰ حرکت موجود با انیمیشن جستجو و انتخاب کنید.</p>
-            </div>
-          </div>
-          <div class="help-item">
-            <span class="help-icon">👁️</span>
-            <div class="help-text">
-              <strong>مرحله ۳:</strong>
-              <p>اطلاعات را مرور کنید و برنامه را ثبت کنید.</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
-
     <div class="form-container">
       <form @submit.prevent="handleSubmit" class="workout-form">
-        <!-- Step 1: Basic Information -->
         <div class="form-section" v-show="currentStep === 1">
           <h3>
             <span class="section-icon">📋</span>
@@ -120,118 +37,7 @@
                 </select>
               </div>
             </div>
-            
-            <div class="form-group">
-              <label for="title">
-                <span class="required-star">*</span>
-                عنوان برنامه
-              </label>
-              <div class="input-wrapper">
-                <span class="input-icon">🏷️</span>
-                <input
-                  id="title"
-                  v-model="form.title"
-                  type="text"
-                  placeholder="مثال: برنامه فیتنس ۴ هفته‌ای"
-                  required
-                  class="form-input"
-                />
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group half">
-                <label for="startDate">
-                  <span class="required-star">*</span>
-                  تاریخ شروع
-                </label>
-                <div class="input-wrapper">
-                  <span class="input-icon">📅</span>
-                  <input
-                    id="startDate"
-                    v-model="form.startDate"
-                    type="date"
-                    required
-                    class="form-input"
-                    @change="calculateEndDate"
-                  />
-                </div>
-              </div>
-              
-              <div class="form-group half">
-                <label for="durationWeeks">
-                  <span class="required-star">*</span>
-                  مدت برنامه
-                </label>
-                <div class="select-wrapper">
-                  <span class="select-icon">⏱️</span>
-                  <select 
-                    id="durationWeeks" 
-                    v-model="form.durationWeeks" 
-                    required 
-                    class="form-input"
-                    @change="handleDurationChange"
-                  >
-                    <option value="1">۱ هفته</option>
-                    <option value="2">۲ هفته</option>
-                    <option value="3">۳ هفته</option>
-                    <option value="4" selected>۴ هفته</option>
-                    <option value="8">۸ هفته</option>
-                    <option value="12">۱۲ هفته</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="endDate">تاریخ پایان</label>
-              <div class="input-wrapper readonly">
-                <span class="input-icon">📅</span>
-                <input
-                  id="endDate"
-                  v-model="form.endDate"
-                  type="date"
-                  readonly
-                  class="form-input"
-                />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="description">توضیحات</label>
-              <div class="textarea-wrapper">
-                <span class="textarea-icon">📝</span>
-                <textarea
-                  id="description"
-                  v-model="form.description"
-                  placeholder="توضیح مختصر درباره برنامه"
-                  class="form-input"
-                  rows="3"
-                ></textarea>
-              </div>
-            </div>
-          </div>
-
-          <!-- Repetition Info Card -->
-          <div class="info-card">
-            <div class="info-header">
-              <span class="info-icon">🔄</span>
-              <h4>نحوه تکرار برنامه</h4>
-            </div>
-            <div class="info-content">
-              <p>شما فقط نیاز به تنظیم <strong>هفته اول</strong> دارید. هفته‌های بعدی به صورت خودکار از هفته اول کپی می‌شوند.</p>
-              <div class="info-highlight">
-                <span class="highlight-icon">✨</span>
-                <span>اگر نیاز به برنامه متفاوت در هفته‌ای دارید، می‌توانید آن هفته را انتخاب کرده و تغییر دهید.</span>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="selectedStudent" class="student-info-card">
-            <div class="student-info-header">
-              <span class="header-icon">👤</span>
-              <h4>اطلاعات شاگرد</h4>
-            </div>
+            <div v-if="selectedStudent" class="student-info-card">
             <div class="student-details">
               <div class="detail-row">
                 <span class="detail-label">نام:</span>
@@ -255,18 +61,116 @@
               </div>
             </div>
           </div>
-        </div>
+           <br>
+            <div class="form-group">
+              <label for="title">
+                <span class="required-star">*</span>
+                عنوان برنامه
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">🏷️</span>
+                <input
+                  id="title"
+                  v-model="form.title"
+                  type="text"
+                  placeholder="مثال: برنامه فیتنس ۴ هفته‌ای"
+                  required
+                  class="form-input"
+                />
+              </div>
+            </div>
+    <div class="form-group half">
+                <label for="durationWeeks">
+                  <span class="required-star">*</span>
+                  مدت برنامه
+                </label>
+                <div class="select-wrapper">
+                  <span class="select-icon">⏱️</span>
+                  <select 
+                    id="durationWeeks" 
+                    v-model="form.durationWeeks" 
+                    required 
+                    class="form-input"
+                    @change="handleDurationChange"
+                  >
+                    <option value="1">۱ هفته</option>
+                    <option value="2">۲ هفته</option>
+                    <option value="3">۳ هفته</option>
+                    <option value="4" selected>۴ هفته</option>
+                    <option value="8">۸ هفته</option>
+                    <option value="12">۱۲ هفته</option>
+                  </select>
+                </div>
+              </div>
+              <br>
+              
+            <div class="form-row">
+              <div class="form-group half">
+                <label for="startDate">
+                  <span class="required-star">*</span>
+                  تاریخ شروع
+                </label>
+                <div class="input-wrapper">
+                  <span class="input-icon">📅</span>
+                  <input
+                    id="startDate"
+                    v-model="form.startDate"
+                    type="date"
+                    required
+                    class="form-input"
+                    @change="calculateEndDate"
+                  />
+                <div class="persian-date-display" v-if="form.startDate">
+                  <span class="persian-icon">🇮🇷</span>
+                  <span class="persian-date">{{ persianStartDate }}</span>
+                </div>
+                </div>
+              </div>
+              
+          
+            </div>
+ <div class="form-row">
+            <div class="form-group">
+              <label for="endDate">تاریخ پایان</label>
+              <div class="input-wrapper readonly">
+                <span class="input-icon">📅</span>
+                <input
+                  id="endDate"
+                  v-model="form.endDate"
+                  type="date"
+                  readonly
+                  class="form-input"
+                />
+              <div class="persian-date-display" v-if="form.endDate">
+                <span class="persian-icon">🇮🇷</span>
+                <span class="persian-date">{{ persianEndDate }}</span>
+              </div>
+              </div>
 
-        <!-- Step 2: Weekly Schedule with Exercise Selection -->
+            </div>
+  </div>
+            <div class="form-group">
+              <label for="description">توضیحات</label>
+              <div class="textarea-wrapper">
+                <span class="textarea-icon">📝</span>
+                <textarea
+                  id="description"
+                  v-model="form.description"
+                  placeholder="توضیح مختصر درباره برنامه"
+                  class="form-input"
+                  rows="3"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+  
+        </div>
         <div class="form-section" v-show="currentStep === 2">
           <h3>
             <span class="section-icon">📅</span>
             برنامه هفتگی
           </h3>
-          <p class="section-description">
-            برنامه تمرینی <strong>هفته اول</strong> را تنظیم کنید. برای هر حرکت می‌توانید از بین حرکات موجود انتخاب کنید.
-          </p>
-
           <!-- Week Selector -->
           <div class="week-selector">
             <div class="week-tabs">
@@ -323,7 +227,7 @@
                   </div>
                 </div>
                 <div class="week-focus">
-                  <label>تمرکز اصلی هفته:</label>
+                  <label>هدف برنامه :</label>
                   <input
                     v-model="week.focus"
                     type="text"
@@ -388,74 +292,100 @@
                         </button>
                       </div>
                       
-                      <div class="exercises-list">
-                        <div 
-                          class="exercise-item" 
-                          v-for="(exercise, exIndex) in day.exercises" 
-                          :key="exIndex"
-                        >
-                          <div class="exercise-header">
-                            <div class="exercise-number">{{ exIndex + 1 }}</div>
-                            <div class="exercise-info" @click="editExercise(exercise)">
-                              <span class="exercise-name">{{ exercise.name }}</span>
-                              <span v-if="exercise.gifUrl" class="exercise-has-gif" title="دارای انیمیشن">🎬</span>
-                            </div>
-                            <button 
-                              type="button" 
-                              @click="removeExercise(day, exIndex)"
-                              class="btn-remove"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                          
-                          <div class="exercise-details">
-                            <div class="detail-input">
-                              <label>ست</label>
-                              <input
-                                v-model="exercise.sets"
-                                type="number"
-                                min="1"
-                                max="10"
-                                placeholder="۳"
-                                class="small-input"
-                              />
-                            </div>
-                            <div class="detail-input">
-                              <label>تکرار</label>
-                              <input
-                                v-model="exercise.reps"
-                                type="text"
-                                placeholder="۱۰-۱۲"
-                                class="small-input"
-                              />
-                            </div>
-                            <div class="detail-input">
-                              <label>استراحت</label>
-                              <input
-                                v-model="exercise.restTime"
-                                type="text"
-                                placeholder="۶۰-۹۰"
-                                class="small-input"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div class="exercise-notes">
-                            <textarea
-                              v-model="exercise.description"
-                              placeholder="نکات فنی حرکت (اختیاری)"
-                              class="notes-input"
-                              rows="2"
-                            ></textarea>
-                          </div>
-                        </div>
-                        
-                        <div v-if="day.exercises.length === 0" class="no-exercises">
-                          <span class="empty-icon">🏋️‍♂️</span>
-                          <p>هنوز حرکتی اضافه نشده است</p>
-                        </div>
-                      </div>
+<div class="exercises-list">
+  <div 
+    class="exercise-item" 
+    v-for="(exercise, exIndex) in day.exercises" 
+    :key="exIndex"
+  >
+    <div class="exercise-header">
+      <div class="exercise-number">{{ exIndex + 1 }}</div>
+      
+      <!-- تصویر کوچک حرکت -->
+      <div class="exercise-thumbnail">
+        <img 
+          :src="exercise.gifUrl" 
+          :alt="exercise.name"
+          loading="lazy"
+          @error="handleImageError"
+        />
+      </div>
+      
+      <!-- نام حرکت به صورت input قابل ویرایش - استفاده از displayName -->
+      <div class="exercise-name-wrapper">
+        <input
+          v-model="exercise.displayName"
+          type="text"
+          class="exercise-name-input"
+          @input="updateExerciseName(exercise)"
+        />
+        <span class="exercise-original-name" v-if="exercise.displayName !== exercise.name">
+          نام اصلی: {{ exercise.name }}
+        </span>
+      </div>
+      
+      <button 
+        type="button" 
+        @click="removeExercise(day, exIndex)"
+        class="btn-remove"
+        title="حذف حرکت"
+      >
+        ✕
+      </button>
+    </div>
+    
+    <div class="exercise-details">
+      <div class="detail-input">
+        <label>ست</label>
+        <input
+          v-model="exercise.sets"
+          type="number"
+          min="1"
+          max="10"
+          placeholder="۳"
+          class="small-input"
+        />
+      </div>
+      <div class="detail-input">
+        <label>تکرار</label>
+        <input
+          v-model="exercise.reps"
+          type="text"
+          placeholder="۱۰-۱۲"
+          class="small-input"
+        />
+      </div>
+      <div class="detail-input">
+        <label>استراحت</label>
+        <input
+          v-model="exercise.restTime"
+          type="text"
+          placeholder="۶۰-۹۰"
+          class="small-input"
+        />
+      </div>
+    </div>
+    
+    <div class="exercise-notes">
+      <textarea
+        v-model="exercise.description"
+        placeholder="نکات فنی حرکت (اختیاری)"
+        class="notes-input"
+        rows="2"
+      ></textarea>
+    </div>
+    
+    <!-- نمایش نام ذخیره شده (برای دیباگ) -->
+    <div class="exercise-meta" v-if="exercise.displayName !== exercise.name">
+      <small>نام سفارشی: {{ exercise.displayName }}</small>
+    </div>
+  </div>
+  
+  <div v-if="day.exercises.length === 0" class="no-exercises">
+    <span class="empty-icon">🏋️‍♂️</span>
+    <p>هنوز حرکتی اضافه نشده است</p>
+  </div>
+</div>
                     </div>
                   </div>
                 </div>
@@ -492,11 +422,11 @@
                 </div>
                 <div class="summary-row">
                   <span class="summary-label">از:</span>
-                  <span class="summary-value">{{ formatDate(form.startDate) }}</span>
+                  <span class="summary-value">{{ formatPersianDate(form.startDate) }}</span>
                 </div>
                 <div class="summary-row">
                   <span class="summary-label">تا:</span>
-                  <span class="summary-value">{{ formatDate(form.endDate) }}</span>
+                  <span class="summary-value">{{ formatPersianDate(form.endDate) }}</span>
                 </div>
                 <div v-if="form.description" class="summary-row description">
                   <span class="summary-label">توضیحات:</span>
@@ -553,15 +483,25 @@
             </div>
           </div>
         </div>
+        <!-- Messages -->
+        <div v-if="successMessage" class="success-message">
+          <span class="message-icon">✅</span>
+          <div class="message-content">
+            <h4>موفقیت!</h4>
+            <p>{{ successMessage }}</p>
+          </div>
+        </div>
 
+        <div v-if="error" class="error-message">
+          <span class="message-icon">❌</span>
+          <div class="message-content">
+            <h4>خطا</h4>
+            <p>{{ error }}</p>
+          </div>
+        </div>
         <!-- Navigation Buttons -->
         <div class="form-navigation">
-          <div v-if="!isMobile" class="step-indicator">
-            <span class="step" :class="{ active: currentStep === 1 }">۱</span>
-            <span class="step" :class="{ active: currentStep === 2 }">۲</span>
-            <span class="step" :class="{ active: currentStep === 3 }">۳</span>
-          </div>
-          
+
           <div class="navigation-buttons">
             <button 
               type="button" 
@@ -596,22 +536,7 @@
           </div>
         </div>
 
-        <!-- Messages -->
-        <div v-if="successMessage" class="success-message">
-          <span class="message-icon">✅</span>
-          <div class="message-content">
-            <h4>موفقیت!</h4>
-            <p>{{ successMessage }}</p>
-          </div>
-        </div>
 
-        <div v-if="error" class="error-message">
-          <span class="message-icon">❌</span>
-          <div class="message-content">
-            <h4>خطا</h4>
-            <p>{{ error }}</p>
-          </div>
-        </div>
       </form>
     </div>
 
@@ -686,19 +611,19 @@
           <div class="results-section">
             <!-- تعداد نتایج -->
             <div class="results-count" v-if="!searchLoading && filteredExercises.length > 0">
-              {{ filteredExercises.length }} حرکت یافت شد
+              {{ filteredExercises.length }} حرکت یافت شد (صفحه {{ currentPage }} از {{ totalPages }})
             </div>
 
             <!-- Loading -->
             <div v-if="searchLoading" class="loading-state">
               <div class="spinner"></div>
-              <p>در حال جستجو...</p>
+              <p>در حال بارگذاری {{ allExercises.length }}/1500 حرکت...</p>
             </div>
 
-            <!-- نتایج -->
+            <!-- نتایج با صفحه‌بندی -->
             <div v-else-if="filteredExercises.length > 0" class="search-results">
               <div 
-                v-for="exercise in filteredExercises" 
+                v-for="exercise in paginatedExercises" 
                 :key="exercise.exerciseId"
                 class="search-result-item"
                 @click="selectExercise(exercise)"
@@ -709,24 +634,58 @@
                 <div class="result-info">
                   <div class="result-name">{{ exercise.name }}</div>
                   <div class="result-tags">
-                    <span class="result-tag muscle">{{ exercise.targetMuscles?.[0] || 'عضله' }}</span>
-                    <span class="result-tag equipment">{{ exercise.equipments?.[0] || 'وسیله' }}</span>
+                    <span class="result-tag muscle">
+                      {{ exercise.targetMuscles?.[0] ? translateMuscle(exercise.targetMuscles[0]) : 'عضله' }}
+                    </span>
+                    <span class="result-tag equipment">
+                      {{ exercise.equipments?.[0] ? translateEquipment(exercise.equipments[0]) : 'وسیله' }}
+                    </span>
+                    <span v-if="exercise.bodyParts?.[0]" class="result-tag bodypart">
+                      {{ translateBodyPart(exercise.bodyParts[0]) }}
+                    </span>
+                  </div>
+                  <div class="result-meta">
+                    <span v-if="exercise.targetMuscles?.length > 1" class="meta-item">
+                      +{{ exercise.targetMuscles.length - 1 }} عضله دیگر
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <!-- Load More -->
-              <div v-if="hasMoreResults" class="load-more">
-                <button @click="loadMoreExercises" class="btn-secondary">
-                  بیشتر...
+              <!-- صفحه‌بندی -->
+              <div v-if="totalPages > 1" class="pagination">
+                <button 
+                  @click="changePage(currentPage - 1)" 
+                  :disabled="currentPage === 1"
+                  class="pagination-btn"
+                >
+                  ←
+                </button>
+                
+                <button 
+                  v-for="page in displayedPages" 
+                  :key="page"
+                  @click="changePage(page)"
+                  :class="['pagination-btn', { active: currentPage === page }]"
+                >
+                  {{ page }}
+                </button>
+                
+                <button 
+                  @click="changePage(currentPage + 1)" 
+                  :disabled="currentPage === totalPages"
+                  class="pagination-btn"
+                >
+                  →
                 </button>
               </div>
             </div>
 
             <!-- بدون نتیجه -->
-            <div v-else-if="exerciseSearchQuery" class="no-results">
+            <div v-else-if="exerciseSearchQuery || selectedQuickFilter !== 'all' || selectedSubcategory" class="no-results">
               <span class="empty-icon">😕</span>
               <p>حرکتی با این مشخصات یافت نشد</p>
+              <p class="result-hint">تعداد کل حرکات: {{ allExercises.length }}</p>
               <button @click="clearFilters" class="btn-clear">
                 🗑️ پاک کردن فیلترها
               </button>
@@ -734,7 +693,7 @@
 
             <!-- حالت پیش‌فرض (پرطرفدارها) -->
             <div v-else class="popular-section">
-              <h4>حرکات پرطرفدار</h4>
+              <h4>حرکات پرطرفدار ({{ popularExercises.length }} حرکت)</h4>
               <div class="popular-grid">
                 <div 
                   v-for="exercise in popularExercises" 
@@ -744,6 +703,7 @@
                 >
                   <img :src="exercise.gifUrl" :alt="exercise.name" loading="lazy" />
                   <span>{{ exercise.name }}</span>
+                  <span class="popular-tag">{{ translateMuscle(exercise.targetMuscles?.[0]) }}</span>
                 </div>
               </div>
             </div>
@@ -756,6 +716,86 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import moment from 'jalali-moment'
+
+// توابع ترجمه
+const translateMuscle = (muscle) => {
+  const translations = {
+    'abs': 'شکم',
+    'pectorals': 'سینه',
+    'lats': 'پشت',
+    'traps': 'ذوزنقه',
+    'delts': 'سرشانه',
+    'biceps': 'جلو بازو',
+    'triceps': 'پشت بازو',
+    'forearms': 'ساعد',
+    'quads': 'جلو پا',
+    'hamstrings': 'پشت پا',
+    'glutes': 'باسن',
+    'calves': 'ساق پا',
+    'adductors': 'داخل ران',
+    'abductors': 'بیرون ران',
+    'upper back': 'پشت',
+    'shoulders': 'سرشانه',
+    'chest': 'سینه',
+    'back': 'پشت',
+    'upper arms': 'بازو',
+    'lower arms': 'ساعد',
+    'upper legs': 'پا',
+    'lower legs': 'ساق پا',
+    'waist': 'شکم',
+    'neck': 'گردن',
+    'cardiovascular system': 'قلبی عروقی',
+    'spine': 'ستون فقرات',
+    'serratus anterior': 'دندان‌ای قدامی',
+    'levator scapulae': 'بالابر کتف'
+  }
+  return translations[muscle] || muscle
+}
+
+const translateEquipment = (equipment) => {
+  const translations = {
+    'body weight': 'بدون وسیله',
+    'dumbbell': 'دمبل',
+    'barbell': 'هالتر',
+    'cable': 'سیم‌کش',
+    'band': 'کش',
+    'kettlebell': 'کتل بل',
+    'leverage machine': 'دستگاه',
+    'smith machine': 'اسمیت',
+    'sled machine': 'اسکوات دستگاه',
+    'stability ball': 'توپ تعادلی',
+    'bosu ball': 'بوسو',
+    'medicine ball': 'توپ طبی',
+    'roller': 'غلتک',
+    'rope': 'طناب',
+    'weighted': 'وزنه‌دار',
+    'assisted': 'کمکی',
+    'trap bar': 'هالتر ذوزنقه',
+    'ez barbell': 'هالتر EZ',
+    'olympic barbell': 'هالتر المپیک',
+    'wheel roller': 'چرخ شکم',
+    'hammer': 'چکش',
+    'tire': 'لاستیک'
+  }
+  return translations[equipment] || equipment
+}
+
+const translateBodyPart = (part) => {
+  const translations = {
+    'chest': 'سینه',
+    'back': 'پشت',
+    'shoulders': 'سرشانه',
+    'upper arms': 'بازو',
+    'lower arms': 'ساعد',
+    'upper legs': 'پا',
+    'lower legs': 'ساق پا',
+    'waist': 'شکم',
+    'neck': 'گردن',
+    'cardio': 'قلبی عروقی'
+  }
+  return translations[part] || part
+}
 
 // Reactive form state
 const form = reactive({
@@ -768,6 +808,23 @@ const form = reactive({
   weeks: []
 })
 
+// برای نمایش شمسی
+const persianStartDate = computed(() => {
+  if (!form.startDate) return 'انتخاب نشده'
+  return moment(form.startDate).locale('fa').format('YYYY/MM/DD')
+})
+
+const persianEndDate = computed(() => {
+  if (!form.endDate) return 'انتخاب نشده'
+  return moment(form.endDate).locale('fa').format('YYYY/MM/DD')
+})
+
+// فرمت تاریخ برای نمایش در خلاصه
+const formatPersianDate = (dateString) => {
+  if (!dateString) return 'ثبت نشده'
+  return moment(dateString).locale('fa').format('dddd، DD MMMM YYYY')
+}
+
 // Component states
 const currentStep = ref(1)
 const loading = ref(false)
@@ -776,7 +833,6 @@ const successMessage = ref('')
 const students = ref([])
 const selectedStudent = ref(null)
 const isMobile = ref(false)
-const showHelp = ref(false)
 const selectedWeek = ref(1)
 const expandedDay = ref(null)
 const expandedWeek = ref(null)
@@ -787,9 +843,11 @@ const exerciseSearchQuery = ref('')
 const allExercises = ref([])
 const filteredExercises = ref([])
 const searchLoading = ref(false)
-const searchOffset = ref(0)
-const hasMoreResults = ref(false)
 const currentTargetDay = ref(null)
+
+// Pagination states
+const currentPage = ref(1)
+const itemsPerPage = 20
 
 // Filter states
 const selectedQuickFilter = ref('all')
@@ -817,11 +875,17 @@ const categories = [
 // زیرمجموعه‌های داینامیک
 const subcategories = computed(() => {
   if (selectedCategory.value === 'muscle') {
-    return ['سینه', 'پشت', 'پا', 'سرشانه', 'جلو بازو', 'پشت بازو', 'شکم', 'پایین تنه']
+    return [...new Set(allExercises.value.flatMap(ex => 
+      ex.targetMuscles?.map(m => translateMuscle(m)) || []
+    ))].sort()
   } else if (selectedCategory.value === 'bodypart') {
-    return ['بالاتنه', 'پایین تنه', 'کل بدن', 'بازوها', 'پاها', 'شکم']
+    return [...new Set(allExercises.value.flatMap(ex => 
+      ex.bodyParts?.map(b => translateBodyPart(b)) || []
+    ))].sort()
   } else if (selectedCategory.value === 'equipment') {
-    return ['دمبل', 'هالتر', 'کابل', 'بدون وسیله', 'کتل بل', 'ماشین', 'کش']
+    return [...new Set(allExercises.value.flatMap(ex => 
+      ex.equipments?.map(e => translateEquipment(e)) || []
+    ))].sort()
   }
   return []
 })
@@ -840,13 +904,46 @@ const persianDays = {
   friday: 'جمعه'
 }
 
+// Pagination computed
+const paginatedExercises = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredExercises.value.slice(start, end)
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredExercises.value.length / itemsPerPage)
+})
+
+const displayedPages = computed(() => {
+  const delta = 2
+  const range = []
+  const rangeWithDots = []
+  let l
+
+  for (let i = 1; i <= totalPages.value; i++) {
+    if (i === 1 || i === totalPages.value || (i >= currentPage.value - delta && i <= currentPage.value + delta)) {
+      range.push(i)
+    }
+  }
+
+  range.forEach((i) => {
+    if (l) {
+      if (i - l === 2) {
+        rangeWithDots.push(l + 1)
+      } else if (i - l !== 1) {
+        rangeWithDots.push('...')
+      }
+    }
+    rangeWithDots.push(i)
+    l = i
+  })
+
+  return rangeWithDots
+})
+
 // Debounce timer
 let searchTimer = null
-
-// Computed
-const progressPercentage = computed(() => {
-  return (currentStep.value / 3) * 100
-})
 
 // Lifecycle hooks
 onMounted(async () => {
@@ -999,7 +1096,9 @@ const handleDurationChange = () => {
     selectedWeek.value = 1
   }
 }
-
+const handleImageError = (e) => {
+  e.target.src = 'https://via.placeholder.com/40?text=No+Image'
+}
 // Fetch students from API
 const fetchStudents = async () => {
   try {
@@ -1094,37 +1193,72 @@ const getFitnessLevelText = (level) => {
 // Get student name by ID
 const getStudentName = (studentId) => {
   if (!studentId) return 'انتخاب نشده'
-  const student = students.value.find(s => String(s.studentId) === String(studentId))
+  const student = students.value.find(s => String(s.studentId) === String(form.studentId))
   return student ? student.fullName : 'نامشخص'
-}
-
-// Format date for display
-const formatDate = (dateString) => {
-  if (!dateString) return 'ثبت نشده'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('fa-IR')
 }
 
 // ==================== EXERCISE API FUNCTIONS ====================
 const loadAllExercises = async () => {
   try {
-    const response = await $fetch('/api/exercises/search?q=a&limit=100')
-    if (response.success) {
-      allExercises.value = response.exercises
-      filteredExercises.value = response.exercises
+    searchLoading.value = true
+    let allExercisesData = []
+    let offset = 0
+    const limit = 100
+    
+    while (true) {
+      const response = await $fetch(`/api/exercises/search?q=a&limit=${limit}&offset=${offset}`)
+      if (response.success && response.exercises.length > 0) {
+        allExercisesData = [...allExercisesData, ...response.exercises]
+        offset += limit
+        
+        // اگر تعداد حرکات کمتر از limit بود، یعنی به انتها رسیده‌ایم
+        if (response.exercises.length < limit) {
+          break
+        }
+      } else {
+        break
+      }
+      
+      // برای جلوگیری از حلقه بی‌نهایت
+      if (offset > 2000) break
     }
+    
+    allExercises.value = allExercisesData
+    console.log(`✅ ${allExercisesData.length} حرکت بارگذاری شد`)
+    filterExercises()
   } catch (err) {
     console.error('Error loading exercises:', err)
+  } finally {
+    searchLoading.value = false
   }
 }
 
 const loadPopularExercises = async () => {
   try {
-    // Load some popular exercises
-    const response = await $fetch('/api/exercises/search?q=press&limit=12')
-    if (response.success) {
-      popularExercises.value = response.exercises.slice(0, 8)
+    // بارگذاری حرکات محبوب از دسته‌های مختلف
+    const popularQueries = ['press', 'curl', 'squat', 'row', 'pull', 'push', 'fly', 'raise']
+    let popularData = []
+    
+    for (const query of popularQueries) {
+      const response = await $fetch(`/api/exercises/search?q=${query}&limit=20`)
+      if (response.success) {
+        popularData = [...popularData, ...response.exercises]
+      }
     }
+    
+    // حذف موارد تکراری
+    const uniqueExercises = []
+    const seenIds = new Set()
+    
+    popularData.forEach(ex => {
+      if (!seenIds.has(ex.exerciseId)) {
+        seenIds.add(ex.exerciseId)
+        uniqueExercises.push(ex)
+      }
+    })
+    
+    popularExercises.value = uniqueExercises.slice(0, 12)
+    console.log(`✅ ${popularExercises.value.length} حرکت محبوب بارگذاری شد`)
   } catch (err) {
     console.error('Error loading popular exercises:', err)
   }
@@ -1133,6 +1267,8 @@ const loadPopularExercises = async () => {
 // تنظیم فیلتر سریع
 const setQuickFilter = (filter) => {
   selectedQuickFilter.value = filter
+  selectedCategory.value = 'all'
+  selectedSubcategory.value = ''
   filterExercises()
 }
 
@@ -1146,6 +1282,7 @@ const setCategory = (category) => {
 // تنظیم زیرمجموعه
 const setSubcategory = (sub) => {
   selectedSubcategory.value = sub
+  selectedQuickFilter.value = 'all'
   filterExercises()
 }
 
@@ -1155,7 +1292,7 @@ const clearFilters = () => {
   selectedCategory.value = 'all'
   selectedSubcategory.value = ''
   exerciseSearchQuery.value = ''
-  filteredExercises.value = allExercises.value
+  filterExercises()
 }
 
 // پاک کردن جستجو
@@ -1164,43 +1301,77 @@ const clearSearch = () => {
   filterExercises()
 }
 
+// تغییر صفحه
+const changePage = (page) => {
+  if (page === '...') return
+  currentPage.value = page
+  // اسکرول به بالای نتایج
+  document.querySelector('.results-section')?.scrollIntoView({ behavior: 'smooth' })
+}
+
 // فیلتر کردن تمرینات
 const filterExercises = () => {
   let filtered = [...allExercises.value]
 
-  // فیلتر بر اساس جستجو
+  // فیلتر بر اساس جستجو (با پشتیبانی از فارسی)
   if (exerciseSearchQuery.value) {
     const query = exerciseSearchQuery.value.toLowerCase()
-    filtered = filtered.filter(ex => 
-      ex.name.toLowerCase().includes(query) ||
-      ex.targetMuscles?.some(m => m.toLowerCase().includes(query)) ||
-      ex.equipments?.some(e => e.toLowerCase().includes(query))
-    )
+    filtered = filtered.filter(ex => {
+      // جستجو در نام انگلیسی
+      if (ex.name.toLowerCase().includes(query)) return true
+      
+      // جستجو در عضلات هدف (ترجمه شده)
+      if (ex.targetMuscles?.some(m => translateMuscle(m).toLowerCase().includes(query))) return true
+      
+      // جستجو در وسایل (ترجمه شده)
+      if (ex.equipments?.some(e => translateEquipment(e).toLowerCase().includes(query))) return true
+      
+      // جستجو در بخش‌های بدن (ترجمه شده)
+      if (ex.bodyParts?.some(b => translateBodyPart(b).toLowerCase().includes(query))) return true
+      
+      return false
+    })
   }
 
-  // فیلتر بر اساس دسته سریع
+  // فیلتر بر اساس دسته سریع (با پشتیبانی از فارسی)
   if (selectedQuickFilter.value !== 'all') {
-    filtered = filtered.filter(ex => 
-      ex.targetMuscles?.some(m => 
-        m.toLowerCase().includes(selectedQuickFilter.value.toLowerCase())
-      )
-    )
+    const filterMap = {
+      'chest': ['سینه'],
+      'back': ['پشت'],
+      'legs': ['پا', 'جلو پا', 'پشت پا', 'باسن', 'ساق پا', 'ران'],
+      'shoulders': ['سرشانه', 'دلتوئید'],
+      'arms': ['بازو', 'جلو بازو', 'پشت بازو', 'ساعد'],
+      'abs': ['شکم']
+    }
+    
+    filtered = filtered.filter(ex => {
+      const filterValue = selectedQuickFilter.value
+      const targets = filterMap[filterValue] || [filterValue]
+      
+      return ex.targetMuscles?.some(m => {
+        const translated = translateMuscle(m)
+        return targets.some(t => translated.includes(t))
+      }) || ex.bodyParts?.some(b => {
+        const translated = translateBodyPart(b)
+        return targets.some(t => translated.includes(t))
+      })
+    })
   }
 
-  // فیلتر بر اساس زیرمجموعه
-  if (selectedSubcategory.value) {
+  // فیلتر بر اساس دسته‌بندی اصلی و زیرمجموعه
+  if (selectedCategory.value !== 'all' && selectedSubcategory.value) {
     filtered = filtered.filter(ex => {
       if (selectedCategory.value === 'muscle') {
         return ex.targetMuscles?.some(m => 
-          m.toLowerCase().includes(selectedSubcategory.value.toLowerCase())
+          translateMuscle(m).includes(selectedSubcategory.value)
         )
       } else if (selectedCategory.value === 'bodypart') {
         return ex.bodyParts?.some(b => 
-          b.toLowerCase().includes(selectedSubcategory.value.toLowerCase())
+          translateBodyPart(b).includes(selectedSubcategory.value)
         )
       } else if (selectedCategory.value === 'equipment') {
         return ex.equipments?.some(e => 
-          e.toLowerCase().includes(selectedSubcategory.value.toLowerCase())
+          translateEquipment(e).includes(selectedSubcategory.value)
         )
       }
       return true
@@ -1208,7 +1379,8 @@ const filterExercises = () => {
   }
 
   filteredExercises.value = filtered
-  searchOffset.value = 0
+  currentPage.value = 1 // بازگشت به صفحه اول بعد از فیلتر
+  console.log(`🔍 ${filtered.length} حرکت پس از فیلتر`)
 }
 
 const searchExercises = async (reset = true) => {
@@ -1223,16 +1395,12 @@ const debouncedSearchExercises = () => {
   }, 300)
 }
 
-const loadMoreExercises = () => {
-  // اینجا می‌تونی صفحه‌بندی رو پیاده‌سازی کنی
-  searchOffset.value += 20
-}
-
 // ==================== EXERCISE MODAL FUNCTIONS ====================
 const showExerciseSearch = (day) => {
   currentTargetDay.value = day
   showExerciseModal.value = true
   clearFilters()
+  currentPage.value = 1
 }
 
 const closeExerciseModal = () => {
@@ -1276,16 +1444,20 @@ const syncExercisesToDatabase = async (exercises) => {
 
 const selectExercise = (exercise) => {
   if (currentTargetDay.value) {
-    // Add exercise to current day
+    // Add exercise to current day با نام قابل ویرایش
     currentTargetDay.value.exercises.push({
       exerciseId: exercise.exerciseId,
-      name: exercise.name,
+      name: exercise.name, // نام اصلی (برای مرجع)
+      customName: exercise.name, // نام قابل ویرایش - اینجا مقداردهی اولیه میشه
+      displayName: exercise.name, // نامی که نمایش داده میشه و کاربر می‌تونه ویرایش کنه
       description: exercise.instructions ? exercise.instructions[0] : '',
       sets: 3,
       reps: '10-12',
-      restTime: '60-90',
+      restTime: '60-90 ثانیه',
       gifUrl: exercise.gifUrl,
-      targetMuscles: exercise.targetMuscles
+      targetMuscles: exercise.targetMuscles,
+      bodyParts: exercise.bodyParts,
+      equipments: exercise.equipments
     })
     
     // Show success message
@@ -1301,13 +1473,14 @@ const selectExercise = (exercise) => {
   closeExerciseModal()
 }
 
-const editExercise = (exercise) => {
-  console.log('Edit exercise:', exercise)
+// تابع برای بروزرسانی نام حرکت
+const updateExerciseName = (exercise) => {
+  // اینجا می‌تونی هر منطق اضافی که می‌خوای رو اضافه کنی
+  console.log('Exercise name updated:', exercise.displayName)
 }
 
-// Add exercise to a day
-const addExercise = (day) => {
-  showExerciseSearch(day)
+const editExercise = (exercise) => {
+  console.log('Edit exercise:', exercise)
 }
 
 // Remove exercise from a day
@@ -1398,19 +1571,18 @@ const handleSubmit = async () => {
           if (ex.exerciseId) {
             allExercises.push({
               exerciseId: ex.exerciseId,
-              name: ex.name,
+              name: ex.name, // نام اصلی
+              displayName: ex.displayName, // نام سفارشی
               gifUrl: ex.gifUrl,
               targetMuscles: ex.targetMuscles || [],
               bodyParts: ex.bodyParts || [],
               equipments: ex.equipments || [],
-              secondaryMuscles: ex.secondaryMuscles || [],
               instructions: ex.instructions || []
             })
           }
         })
       })
     })
-    
     // اگر حرکتی وجود داشت، با API همگام‌سازی کن
     if (allExercises.length > 0) {
       try {
@@ -1422,12 +1594,11 @@ const handleSubmit = async () => {
         console.log('✅ Exercises synced:', syncResponse)
       } catch (syncErr) {
         console.error('⚠️ Error syncing exercises (continuing anyway):', syncErr)
-        // ادامه می‌دیم حتی اگر sync خطا بده
       }
     }
     
     // ========== STEP 2: ایجاد برنامه تمرینی ==========
-    const workoutData = {
+ const workoutData = {
       studentId: parseInt(selectedStudentObj.studentId),
       title: form.title,
       description: form.description || '',
@@ -1439,9 +1610,14 @@ const handleSubmit = async () => {
         days: week.days.map(day => ({
           ...day,
           exercises: day.exercises.map(ex => ({
-            ...ex,
-            // مطمئن می‌شیم exerciseId حتماً ارسال بشه
-            exerciseId: ex.exerciseId || null
+            exerciseId: ex.exerciseId || null,
+            name: ex.displayName || ex.name, // ⚠️ اینجا از displayName استفاده کن
+            originalName: ex.name, // نام اصلی رو هم ذخیره کن (اختیاری)
+            description: ex.description,
+            sets: ex.sets,
+            reps: ex.reps,
+            restTime: ex.restTime,
+            gifUrl: ex.gifUrl
           }))
         }))
       }))
@@ -1492,7 +1668,6 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-/* تمام استایل‌های قبلی بدون تغییر می‌مانند */
 .create-workout-page {
   direction: rtl;
   max-width: 1200px;
@@ -1812,6 +1987,30 @@ textarea.form-input {
   padding-bottom: 1rem;
   resize: vertical;
   min-height: 100px;
+}
+
+/* Persian Date Display */
+.persian-date-display {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #fdfbfb 0%, #f8f9fa 100%);
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  color: #495057;
+  direction: rtl;
+}
+
+.persian-icon {
+  font-size: 1.1rem;
+}
+
+.persian-date {
+  font-weight: 500;
+  color: #667eea;
 }
 
 /* Student Info Card */
@@ -3200,6 +3399,11 @@ textarea.form-input {
     margin-bottom: 0;
   }
 
+  .persian-date-display {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
   .info-card {
     padding: 1rem;
   }
@@ -3515,6 +3719,227 @@ textarea.form-input {
   .spinner {
     animation: none;
     transition: none;
+  }
+}
+/* Exercise Items - با thumbnail */
+.exercises-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.exercise-item {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.exercise-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.exercise-number {
+  width: 28px;
+  height: 28px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+/* thumbnail جدید */
+.exercise-thumbnail {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  border: 2px solid #e9ecef;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.exercise-thumbnail:hover {
+  border-color: #667eea;
+  transform: scale(1.05);
+}
+
+.exercise-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.exercise-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.exercise-name {
+  color: #333;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-remove {
+  width: 28px;
+  height: 28px;
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.btn-remove:hover {
+  background: #ff5252;
+  transform: scale(1.1);
+}
+
+.btn-remove:active {
+  transform: scale(0.9);
+}
+
+/* responsive برای موبایل */
+@media (max-width: 768px) {
+  .exercise-thumbnail {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .exercise-name {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .exercise-header {
+    flex-wrap: wrap;
+    position: relative;
+    padding-top: 0.5rem;
+  }
+  
+  .exercise-number {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.25rem;
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+  }
+  
+  .exercise-thumbnail {
+    width: 45px;
+    height: 45px;
+    margin-right: 0.5rem;
+  }
+  
+  .btn-remove {
+    position: absolute;
+    left: 0.25rem;
+    top: 0.25rem;
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
+  }
+  
+  .exercise-info {
+    width: calc(100% - 60px);
+    margin-right: 50px;
+  }
+}
+/* Exercise name wrapper */
+.exercise-name-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.exercise-name-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+.exercise-name-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.exercise-name-input::placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+.exercise-original-name {
+  font-size: 0.7rem;
+  color: #888;
+  padding-right: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Exercise meta info */
+.exercise-meta {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #dee2e6;
+  font-size: 0.7rem;
+  color: #888;
+}
+
+/* تنظیمات responsive */
+@media (max-width: 768px) {
+  .exercise-name-input {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .exercise-original-name {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .exercise-name-wrapper {
+    width: calc(100% - 80px);
+    margin-right: 45px;
+  }
+  
+  .exercise-name-input {
+    font-size: 0.85rem;
   }
 }
 </style>
