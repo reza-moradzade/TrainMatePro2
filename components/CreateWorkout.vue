@@ -1,5 +1,7 @@
+
 <template>
-  <div class="create-workout-page">
+<!-- جدید -->
+<div class="create-workout-page">
     <div class="page-header">
       <div class="header-top">
         <div class="header-title">
