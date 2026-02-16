@@ -7,8 +7,7 @@
           <span class="back-icon">←</span>
         </button>
         <div class="header-title">
-          <h1>➕ افزودن شاگرد جدید</h1>
-          <p>اطلاعات شاگرد جدید را وارد کنید</p>
+          <h1>افزودن شاگرد جدید</h1>
         </div>
       </div>
     </div>

@@ -5,7 +5,6 @@
       <div class="header-top">
         <div class="header-title">
           <h1>👥 شاگردان من</h1>
-          <p>لیست شاگردان تحت آموزش شما</p>
         </div>
         
         <!-- Add Student Button - Mobile Optimized -->

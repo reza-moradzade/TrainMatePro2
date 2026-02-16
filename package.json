@@ -7,13 +7,14 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "start": "node .output/server/index.mjs",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "start": "node .output/server/index.mjs"
   },
   "dependencies": {
     "@nuxtjs/i18n": "^9.5.6",
     "axios": "^1.13.5",
     "bcryptjs": "^2.4.3",
+    "jalali-moment": "^3.3.11",
     "lodash": "^4.17.23",
     "nuxt": "^3.11.2",
     "sequelize": "^6.37.7",

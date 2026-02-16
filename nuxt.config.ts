@@ -64,19 +64,18 @@ export default defineNuxtConfig({
     }
   },
   
-  // ✅ CSS - فقط main.css رو لود کن (tailwind از طریق ماژول)
+  // ✅ CSS
   css: [
     '~/assets/css/main.css'
   ],
   
-  // ✅ ماژول‌ها - ماژول i18n رو کامنت کردم چون نصب نیست
+  // ✅ ماژول‌ها
   modules: [
     '@nuxtjs/tailwindcss',
-    // '@vite-pwa/nuxt', // فعلاً کامنت - بعداً فعال کن
-    // '@nuxtjs/i18n' // فعلاً کامنت - نیاز به نصب داره
+    // '@vite-pwa/nuxt',
   ],
   
-  // ✅ Tailwind CSS - مسیر درست
+  // ✅ Tailwind CSS
   tailwindcss: {
     cssPath: '~/assets/css/tailwind.css',
     configPath: 'tailwind.config.ts',
@@ -84,7 +83,7 @@ export default defineNuxtConfig({
     viewer: false
   },
   
-  // ✅ PWA - ساده‌سازی شده
+  // ✅ PWA
   pwa: {
     manifest: {
       name: 'TrainMate Pro',
@@ -103,7 +102,7 @@ export default defineNuxtConfig({
     }
   },
   
-  // ✅ Nitro - بدون تغییر
+  // ✅ Nitro - بهینه برای Railway
   nitro: {
     preset: 'node-server',
     output: {
@@ -114,7 +113,7 @@ export default defineNuxtConfig({
     storage: {
       db: {
         driver: 'fs',
-        base: './.data'
+        base: '/tmp/data' // Railway از /tmp استفاده کن برای ذخیره موقت
       }
     },
     compressPublicAssets: true,
@@ -123,17 +122,24 @@ export default defineNuxtConfig({
       options: {
         target: 'es2020'
       }
-    }
+    },
+    // Railway port
+    serveStatic: true,
+    timing: process.env.NODE_ENV === 'development'
   },
   
-  // ✅ Runtime Config - بدون تغییر
+  // ✅ Runtime Config - با متغیر محیطی Railway
   runtimeConfig: {
+    // سمت سرور
     sessionSecret: process.env.SESSION_SECRET || 'dev-secret',
-    databasePath: process.env.DATABASE_PATH || './database.sqlite',
+    databasePath: process.env.DATABASE_PATH || '/tmp/database.sqlite', // Railway path
+    exerciseApiUrl: process.env.EXERCISE_API_URL || 'https://exercise-api-production-1e19.up.railway.app/api/v1',
     
+    // سمت کلاینت
     public: {
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-      apiUrl: process.env.NUXT_PUBLIC_API_URL || 'http://localhost:3000/api',
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'https://trainmate-pro.up.railway.app',
+      apiUrl: process.env.NUXT_PUBLIC_API_URL || 'https://trainmate-pro.up.railway.app/api',
+      exerciseApiUrl: process.env.EXERCISE_API_URL || 'https://exercise-api-production-1e19.up.railway.app/api/v1',
       appName: 'TrainMate Pro',
       appVersion: '1.0.0',
       supportEmail: 'support@trainmate.com',
@@ -147,7 +153,7 @@ export default defineNuxtConfig({
     }
   },
   
-  // ✅ Vite - حذف SCSS چون فایلش نیست
+  // ✅ Vite
   vite: {
     build: {
       target: 'es2020',
@@ -181,7 +187,7 @@ export default defineNuxtConfig({
     '/api/**': { cors: true }
   },
   
-  // ✅ Components - مسیرها درست ولی پوشه‌ها وجود نداره (Warning می‌دهد ولی ایراد نداره)
+  // ✅ Components
   components: {
     dirs: [
       '~/components',
@@ -202,17 +208,6 @@ export default defineNuxtConfig({
     ]
   },
   
-  // ✅ i18n - کامنت شده چون نصب نیست
-  // i18n: {
-  //   locales: [
-  //     { code: 'fa', iso: 'fa-IR', name: 'فارسی', file: 'fa.json', dir: 'rtl' }
-  //   ],
-  //   defaultLocale: 'fa',
-  //   strategy: 'prefix_except_default',
-  //   detectBrowserLanguage: false,
-  //   vueI18n: './i18n.config.ts'
-  // },
-  
   // ✅ Performance
   experimental: {
     payloadExtraction: false,
@@ -221,32 +216,12 @@ export default defineNuxtConfig({
     viewTransition: true
   },
   
-  // ❌ Security - کامنت شده چون ماژول نصب نیست
-  // security: {
-  //   headers: {
-  //     contentSecurityPolicy: {
-  //       'base-uri': ["'self'"],
-  //       'font-src': ["'self'", 'https:', 'data:'],
-  //       'form-action': ["'self'"],
-  //       'frame-ancestors': ["'self'"],
-  //       'img-src': ["'self'", 'data:', 'https:'],
-  //       'object-src': ["'none'"],
-  //       'script-src-attr': ["'none'"],
-  //       'style-src': ["'self'", 'https:', "'unsafe-inline'"],
-  //       'upgrade-insecure-requests': true
-  //     },
-  //     crossOriginEmbedderPolicy: false,
-  //     crossOriginResourcePolicy: 'cross-origin',
-  //     xContentTypeOptions: 'nosniff',
-  //     xDownloadOptions: 'noopen',
-  //     xFrameOptions: 'SAMEORIGIN',
-  //     xPermittedCrossDomainPolicies: 'none',
-  //     xXSSProtection: '0'
-  //   },
-  //   rateLimiter: {
-  //     headers: true,
-  //     interval: 60000,
-  //     tokensPerInterval: 100
-  //   }
-  // }
+  // ✅ Hooks برای Railway
+  hooks: {
+    'nitro:config': (config) => {
+      // Railway port
+      config.devServer = config.devServer || {}
+      config.devServer.port = process.env.PORT || 3000
+    }
+  }
 })

@@ -3,16 +3,16 @@
     <!-- Header Section -->
     <div class="page-header">
       <div class="header-top">
-        <h1>👋 سلام، {{ userName }} عزیز</h1>
-        <div class="date-badge" v-if="isMobile">
+       <h1>داشبورد مربی</h1>
+        <!--  <div class="date-badge" v-if="isMobile">
           {{ currentDate }}
-        </div>
+        </div> -->
       </div>
-      <p>به پنل مربی سیستم مدیریت تمرین خوش آمدید</p>
+
     </div>
 
     <!-- Welcome Card - Responsive -->
-    <div class="welcome-card">
+    <!-- <div class="welcome-card">
       <div class="welcome-icon">💪</div>
       <div class="welcome-content">
         <h3>آماده‌اید برنامه تمرینی ایجاد کنید؟</h3>
@@ -28,7 +28,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- Stats Cards - Responsive Grid -->
     <div class="stats-grid">
